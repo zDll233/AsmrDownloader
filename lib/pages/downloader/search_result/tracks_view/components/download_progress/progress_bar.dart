@@ -20,8 +20,8 @@ class ProgressBar extends ConsumerWidget {
           value: process,
         ),
         Positioned.fill(
-          left: 5,
-          right: 5,
+          left: 10,
+          right: 10,
           child: Row(children: ellipsisInMiddle(currentFileName)),
         ),
       ]),

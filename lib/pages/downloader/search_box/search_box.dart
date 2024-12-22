@@ -24,6 +24,8 @@ class SearchBoxState extends ConsumerState<SearchBox> {
 
   @override
   Widget build(BuildContext context) {
+    final downloading =
+        ref.watch(dlStatusProvider) == DownloadStatus.downloading;
     return SizedBox(
       height: 50.0,
       child: Padding(
@@ -41,45 +43,32 @@ class SearchBoxState extends ConsumerState<SearchBox> {
                   focusedBorder:
                       OutlineInputBorder(borderSide: BorderSide(color: _color)),
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    _inputText = value;
-                  });
-                },
+                onChanged: (value) => _inputText = value,
+                onSubmitted: (_) =>
+                    ref.read(uiServiceProvider).search(_inputText),
               ),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 5.0),
-              child: Consumer(
-                builder: (_, WidgetRef ref, __) {
-                  final dlStatus = ref.watch(dlStatusProvider);
-                  return IconButton(
-                    onPressed: dlStatus == DownloadStatus.downloading
-                        ? null
-                        : () => ref.read(uiServiceProvider).search(_inputText),
-                    icon: Icon(Icons.search),
-                  );
-                },
+              child: IconButton(
+                onPressed: downloading
+                    ? null
+                    : () => ref.read(uiServiceProvider).search(_inputText),
+                icon: Icon(Icons.search),
               ),
             ),
-            Consumer(
-              builder: (_, WidgetRef ref, __) {
-                final dlStatus = ref.watch(dlStatusProvider);
-                return IconButton(
-                  onPressed: dlStatus == DownloadStatus.downloading
-                      ? null
-                      : () async {
-                          final newSearchText = await ref
-                              .read(uiServiceProvider)
-                              .pasteAndSearch();
-                          if (newSearchText != null) {
-                            _controller.text = newSearchText;
-                            _inputText = newSearchText;
-                          }
-                        },
-                  icon: Icon(Icons.content_paste_go),
-                );
-              },
+            IconButton(
+              onPressed: downloading
+                  ? null
+                  : () async {
+                      final newSearchText =
+                          await ref.read(uiServiceProvider).pasteAndSearch();
+                      if (newSearchText != null) {
+                        _controller.text = newSearchText;
+                        _inputText = newSearchText;
+                      }
+                    },
+              icon: Icon(Icons.content_paste_go),
             ),
           ],
         ),
