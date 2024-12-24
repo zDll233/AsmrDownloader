@@ -216,10 +216,12 @@ class DownloadManager {
     void Function(int, int)? onReceiveProgress,
   }) async {
     final fileName = p.basename(savePath);
-
     final file = File(savePath);
 
-    final tmpSavePath = '$savePath.tmp';
+    final downloadingPath = '$savePath.downloading';
+    final downloadingFile = File(downloadingPath);
+
+    final tmpSavePath = '$savePath.downloading.tmp';
     final tmpFile = File(tmpSavePath);
 
     // 本地已经下载的文件大小
@@ -229,14 +231,20 @@ class DownloadManager {
     while (true) {
       try {
         if (await file.exists()) {
-          downloadedBytes = await file.length();
+          Log.info('file already downloaded: $fileName\n'
+              'savePath: $savePath');
+          return true;
+        }
+
+        if (await downloadingFile.exists()) {
+          downloadedBytes = await downloadingFile.length();
         }
 
         if (await tmpFile.exists()) {
           tmpFileLen = await tmpFile.length();
           if (tmpFileLen > 0 && tmpFileLen + downloadedBytes <= fileSize) {
             downloadedBytes += tmpFileLen;
-            await mergeFile(file, tmpFile);
+            await mergeFile(downloadingFile, tmpFile);
           } else {
             await tmpFile.delete();
           }
@@ -249,7 +257,7 @@ class DownloadManager {
                 'savePath: $savePath');
             await ref.read(asmrApiProvider).download(
                   url,
-                  savePath,
+                  downloadingPath,
                   cancelToken: cancelToken,
                   deleteOnError: false,
                   onReceiveProgress: onReceiveProgress,
@@ -272,9 +280,12 @@ class DownloadManager {
             );
           }
         } else if (downloadedBytes == fileSize) {
-          if (fileSize == 0) {
+          if (downloadedBytes == 0) {
             await file.create();
+          } else {
+            await downloadingFile.rename(savePath);
           }
+
           Log.info('download completed: $fileName');
           return true;
         } else {
@@ -298,7 +309,7 @@ class DownloadManager {
         Log.error('download failed: $fileName\n' 'unhandled error: $e');
         return false;
       } finally {
-        await mergeFile(file, tmpFile);
+        await mergeFile(downloadingFile, tmpFile);
       }
     }
   }
