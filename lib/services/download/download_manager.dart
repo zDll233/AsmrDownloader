@@ -221,7 +221,7 @@ class DownloadManager {
     final downloadingPath = '$savePath.downloading';
     final downloadingFile = File(downloadingPath);
 
-    final tmpSavePath = '$savePath.downloading.tmp';
+    final tmpSavePath = '$savePath.downloading.part';
     final tmpFile = File(tmpSavePath);
 
     // 本地已经下载的文件大小
