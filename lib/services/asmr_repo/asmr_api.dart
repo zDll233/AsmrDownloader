@@ -28,9 +28,9 @@ class AsmrApi {
 
   AsmrApi() {
     _apiDio.options
-      ..connectTimeout = Duration(seconds: 10)
-      ..receiveTimeout = Duration(seconds: 10)
-      ..sendTimeout = Duration(seconds: 10);
+      ..connectTimeout = Duration(seconds: 5)
+      ..receiveTimeout = Duration(seconds: 5)
+      ..sendTimeout = Duration(seconds: 5);
   }
 
   void setApiChannel(String apiChannel) {

@@ -23,7 +23,7 @@ class DownloadButton extends ConsumerWidget {
         child: InkWell(
           customBorder: const StadiumBorder(),
           onTap: downloading ? null : ref.read(downloadManagerProvider).run,
-          splashColor: Colors.pinkAccent.withOpacity(0.3),
+          splashColor: Colors.pinkAccent.withValues(alpha: 0.3),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             alignment: Alignment.center,

@@ -19,10 +19,11 @@ class UIService {
   UIService(this.ref);
 
   Future<void> resetProgress() async {
-    ref.read(processProvider.notifier).state = 0;
-    ref.read(currentDlNoProvider.notifier).state = 0;
-    ref.read(totalTaskCntProvider.notifier).state = 0;
-    ref.read(currentFileNameProvider.notifier).state = '';
+    ref
+      ..read(processProvider.notifier).state = 0
+      ..read(currentDlNoProvider.notifier).state = 0
+      ..read(totalTaskCntProvider.notifier).state = 0
+      ..read(currentFileNameProvider.notifier).state = '';
     await WindowsTaskbar.setProgress(0, 0);
   }
 
@@ -38,9 +39,10 @@ class UIService {
 
     if (searchText == ref.read(searchTextProvider)) {
       // force to refetch
-      ref.invalidate(workInfoProvider);
-      ref.invalidate(rawTracksProvider);
-      ref.invalidate(coverBytesProvider);
+      ref
+        ..invalidate(workInfoProvider)
+        ..invalidate(rawTracksProvider)
+        ..invalidate(coverBytesProvider);
     } else {
       ref.read(searchTextProvider.notifier).state = searchText;
     }
@@ -63,9 +65,10 @@ class UIService {
   void onApiChannelChoosed(String? newValue) {
     if (newValue == null || newValue == ref.read(apiChannelProvider)) return;
 
-    ref.read(apiChannelProvider.notifier).state = newValue;
-    ref.read(configFileProvider).addOrUpdate({'apiChannel': newValue});
-    ref.read(asmrApiProvider).setApiChannel(newValue);
+    ref
+      ..read(apiChannelProvider.notifier).state = newValue
+      ..read(configFileProvider).addOrUpdate({'apiChannel': newValue})
+      ..read(asmrApiProvider).setApiChannel(newValue);
   }
 
   Future<void> onProxyChanged(bool? value) async {
@@ -75,16 +78,18 @@ class UIService {
 
     if (proxy == ref.read(proxyProvider)) return;
 
-    ref.read(proxyProvider.notifier).state = proxy;
-    ref.read(configFileProvider).addOrUpdate({'proxy': proxy});
-    ref.read(asmrApiProvider).proxy = proxy;
+    ref
+      ..read(proxyProvider.notifier).state = proxy
+      ..read(configFileProvider).addOrUpdate({'proxy': proxy})
+      ..read(asmrApiProvider).proxy = proxy;
   }
 
   void onDlCoverChanged(bool? value) {
     if (value == null) return;
 
-    ref.read(dlCoverProvider.notifier).state = value;
-    ref.read(configFileProvider).addOrUpdate({'dlCover': value});
+    ref
+      ..read(dlCoverProvider.notifier).state = value
+      ..read(configFileProvider).addOrUpdate({'dlCover': value});
     Log.info('dlCover: $value');
   }
 
@@ -92,8 +97,9 @@ class UIService {
     final dlPath = await FilePicker.platform.getDirectoryPath();
     if (dlPath == null) return;
 
-    ref.read(downloadPathProvider.notifier).state = dlPath;
-    ref.read(configFileProvider).addOrUpdate({'dlPath': dlPath});
+    ref
+      ..read(downloadPathProvider.notifier).state = dlPath
+      ..read(configFileProvider).addOrUpdate({'dlPath': dlPath});
     Log.info('dlPath: $dlPath');
   }
 
