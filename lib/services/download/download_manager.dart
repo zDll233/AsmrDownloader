@@ -253,7 +253,7 @@ class DownloadManager {
         if (downloadedBytes < fileSize) {
           if (downloadedBytes == 0) {
             Log.info('start downloading: $fileName\n'
-                'fileSize: $fileSize\n'
+                'fileSize: ${getSizeString(fileSize)}\n'
                 'url: $url\n'
                 'savePath: $savePath');
             await ref.read(asmrApiProvider).download(
@@ -265,7 +265,7 @@ class DownloadManager {
                 );
           } else {
             Log.info('resume downloading: $fileName\n'
-                'downloadedBytes: $downloadedBytes, fileSize: $fileSize\n'
+                'downloadedSize: ${getSizeString(downloadedBytes)}, fileSize: ${getSizeString(fileSize)}\n'
                 'url: $url\n'
                 'savePath: $savePath');
             await ref.read(asmrApiProvider).download(
