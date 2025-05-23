@@ -37,6 +37,13 @@ class DownloadPathPicker extends ConsumerWidget {
                 icon: const Icon(Icons.folder),
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.only(left: 5.0),
+              child: IconButton(
+                onPressed: ref.read(uiServiceProvider).openFolder,
+                icon: const Icon(Icons.folder_open),
+              ),
+            ),
           ],
         ),
       ),

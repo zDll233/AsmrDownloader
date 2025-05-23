@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:asmr_downloader/common/config_providers.dart';
 import 'package:asmr_downloader/models/track_item.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
@@ -13,6 +15,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
+
+import 'package:path/path.dart' as p;
 
 class UIService {
   final Ref ref;
@@ -101,6 +105,18 @@ class UIService {
       ..read(downloadPathProvider.notifier).state = dlPath
       ..read(configFileProvider).addOrUpdate({'dlPath': dlPath});
     Log.info('dlPath: $dlPath');
+  }
+
+  void openFolder() async {
+    final vkSourceIdPath =
+        p.join(ref.read(voiceWorkPathProvider), ref.read(sourceIdProvider));
+
+    final path = Directory(vkSourceIdPath).existsSync()
+        ? vkSourceIdPath
+        : ref.read(downloadPathProvider);
+
+    Process.run('explorer "$path"', []);
+    Log.info('open folder: "$path"');
   }
 
   Future<void> onExit(BuildContext context) async {
