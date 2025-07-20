@@ -53,8 +53,8 @@ final _initProvider = FutureProvider.autoDispose((ref) async {
   ref.read(apiChannelProvider.notifier).state =
       config['apiChannel'] as String? ?? 'asmr-200';
 
-  final savedProxy = config['proxy'];
-  if (savedProxy != null && savedProxy != 'DIRECT') {
+  final savedProxy = config['proxy'] as String? ?? 'DIRECT';
+  if (savedProxy != 'DIRECT') {
     final proxy = SystemProxyConfig.systemProxy;
     ref.read(proxyProvider.notifier).state = proxy;
     ref.read(configFileProvider).addOrUpdate({'proxy': proxy});

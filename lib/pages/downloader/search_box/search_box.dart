@@ -44,8 +44,9 @@ class SearchBoxState extends ConsumerState<SearchBox> {
                       OutlineInputBorder(borderSide: BorderSide(color: _color)),
                 ),
                 onChanged: (value) => _inputText = value,
-                onSubmitted: (_) =>
-                    ref.read(uiServiceProvider).search(_inputText),
+                onSubmitted: (_) => downloading
+                    ? null
+                    : ref.read(uiServiceProvider).search(_inputText),
               ),
             ),
             Padding(
