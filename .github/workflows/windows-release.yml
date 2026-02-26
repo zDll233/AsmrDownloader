@@ -1,0 +1,55 @@
+name: AsmrDownloader Windows Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      APP_NAME: "${{ github.event.repository.name }}"
+      VERSION: "${{ github.ref_name }}"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: |
+          flutter config --enable-windows-desktop
+          flutter pub get
+
+      - name: Build Windows Release
+        run: flutter build windows --release
+
+      - name: Compress Release Folder
+        run: |
+          if (!(Test-Path -Path "dist")) { New-Item -ItemType Directory -Path "dist" }
+          $ZipFileName = "${{ env.APP_NAME }}-${{ env.VERSION }}-Windows.zip"
+          Compress-Archive `
+            -Path build/windows/x64/runner/Release/* `
+            -DestinationPath "dist/$ZipFileName"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: "${{ env.APP_NAME }} ${{ env.VERSION }}"
+          files: "dist/*.zip"
+          generate_release_notes: false 
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
