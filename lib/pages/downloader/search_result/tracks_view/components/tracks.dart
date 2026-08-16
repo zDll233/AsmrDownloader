@@ -1,5 +1,4 @@
 import 'package:asmr_downloader/pages/components/middle_ellipsis_text.dart';
-import 'package:asmr_downloader/pages/window_title_bar/move_window.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/models/track_item.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +20,12 @@ class Tracks extends ConsumerStatefulWidget {
 class TracksState extends ConsumerState<Tracks> {
   @override
   Widget build(BuildContext context) {
-    final trackExpansionLs = trackExpansion(widget.rootFolder);
+    // watch 而非使用 widget.rootFolder: 扩展名过滤条等外部修改
+    // 选中状态后需要刷新文件树
+    final rootFolder = ref.watch(rootFolderProvider);
+    if (rootFolder == null) return const SizedBox.shrink();
+
+    final trackExpansionLs = trackExpansion(rootFolder);
     return CustomScrollView(
       slivers: [
         SliverList(
@@ -32,10 +36,8 @@ class TracksState extends ConsumerState<Tracks> {
         ),
         SliverFillRemaining(
           hasScrollBody: false,
-          child: MoveWindow(
-            //this container will fill the remaining space in the ViewPort
-            child: Container(),
-          ),
+          // 占满剩余空间
+          child: Container(),
         ),
       ],
     );
@@ -50,14 +52,21 @@ class TracksState extends ConsumerState<Tracks> {
           child: ExpansionTile(
             leading: Icon(Icons.folder, color: Color(0xFFF9C100)),
             trailing: Checkbox(
-                value: track.selected,
-                onChanged: (bool? newValue) {
-                  if (newValue == null) return;
+                tristate: true,
+                value: track.selectionState,
+                onChanged: (_) {
+                  // 自定义三态点击行为 (Flutter 默认循环 false→true→null→false
+                  // 不符合预期):
+                  // 全选 -> 取消全部; 半选/全空 -> 全选
+                  final next = track.selectionState == true ? false : true;
                   setState(() {
-                    track.setSelection(newValue);
+                    track.setSelection(next);
                   });
+                  // 用 ref.read 取最新树 (widget.rootFolder 可能是旧引用,
+                  // 深拷贝会丢失本次修改)
                   ref.read(rootFolderProvider.notifier).state =
-                      widget.rootFolder;
+                      (ref.read(rootFolderProvider) ?? widget.rootFolder)
+                          .copyWith();
                 }),
             title: Text(track.title),
             children: track.children
@@ -78,7 +87,11 @@ class TracksState extends ConsumerState<Tracks> {
               setState(() {
                 track.selected = newValue;
               });
-              ref.read(rootFolderProvider.notifier).state = widget.rootFolder;
+              // 用 ref.read 取最新树 (widget.rootFolder 可能是旧引用,
+              // 深拷贝会丢失本次修改)
+              ref.read(rootFolderProvider.notifier).state =
+                  (ref.read(rootFolderProvider) ?? widget.rootFolder)
+                      .copyWith();
             },
             title: Row(
               children: [

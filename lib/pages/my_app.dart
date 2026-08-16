@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:asmr_downloader/pages/components/initialization.dart';
 import 'package:asmr_downloader/pages/downloader/downloader.dart';
-import 'package:asmr_downloader/pages/window_title_bar/move_window.dart';
 import 'package:asmr_downloader/pages/window_title_bar/window_title_bar.dart';
 import 'package:asmr_downloader/services/ui/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
@@ -29,10 +28,14 @@ class MyApp extends ConsumerWidget {
         ],
         theme: theme,
         scrollBehavior: MyCustomScrollBehavior(),
-        home: const Scaffold(
+        home: Scaffold(
           backgroundColor: Colors.transparent,
-          body: MoveWindow(
-            child: Column(
+          body: Listener(
+            onPointerDown: (event) {
+              // ignore: avoid_print
+              debugPrint('GLOBAL pointer down: ${event.position}');
+            },
+            child: const Column(
               children: [
                 WindowTitleBar(),
                 Downloader(),

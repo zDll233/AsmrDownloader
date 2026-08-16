@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:asmr_downloader/common/config_providers.dart';
+import 'package:asmr_downloader/common/const.dart';
 import 'package:asmr_downloader/models/track_item.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/tracks_providers.dart';
@@ -12,6 +13,7 @@ import 'package:asmr_downloader/utils/log.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
@@ -117,6 +119,36 @@ class UIService {
 
     Process.run('explorer "$path"', []);
     Log.info('open folder: "$path"');
+  }
+
+  /// 应用窗口背景效果: transparent 全透明 / acrylic 毛玻璃 / opaque 不透明。
+  /// 仅 Windows 生效 (系统级 acrylic 窗口效果, 参考 Again 项目)。
+  Future<void> applyWindowEffect(String effect) async {
+    if (!Platform.isWindows) return;
+    try {
+      Log.info('applyWindowEffect: $effect');
+      switch (effect) {
+        case WINDOW_EFFECT_TRANSPARENT:
+          await Window.setEffect(
+            effect: WindowEffect.transparent,
+            color: const Color(0xCC222222),
+          );
+        case WINDOW_EFFECT_OPAQUE:
+          await Window.setEffect(
+            effect: WindowEffect.solid,
+            color: const Color(0xFF1E1E28),
+          );
+        default: // WINDOW_EFFECT_ACRYLIC
+          await Window.setEffect(
+            effect: WindowEffect.acrylic,
+            // tint 很浅 (25%), 模糊的桌面背景清晰透出。
+            color: const Color(0x40262A33),
+          );
+      }
+      Log.info('applyWindowEffect: $effect done');
+    } catch (e, s) {
+      Log.error('applyWindowEffect failed.\n$e.\n$s');
+    }
   }
 
   Future<void> onExit(BuildContext context) async {

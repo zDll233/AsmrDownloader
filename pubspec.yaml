@@ -17,6 +17,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.5.1
+  http: ^1.3.0
   intl: any
   logger: ^2.4.0
   mcp_toolkit: ^3.0.0

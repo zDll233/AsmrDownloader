@@ -74,6 +74,28 @@ class Folder extends TrackItem {
     }
   }
 
+  /// 子项选中状态 (三态): true=全部选中, null=部分选中, false=全未选中。
+  bool? get selectionState {
+    if (children.isEmpty) return selected;
+    var hasTrue = false;
+    var hasPartial = false;
+    var hasFalse = false;
+    for (final child in children) {
+      final s = child is Folder ? child.selectionState : child.selected;
+      if (s == true) {
+        hasTrue = true;
+      } else if (s == null) {
+        hasPartial = true;
+      } else {
+        hasFalse = true;
+      }
+    }
+    // 任何子项半选, 或全选/全未选混合 -> 半选
+    if (hasPartial) return null;
+    if (hasTrue && hasFalse) return null;
+    return hasTrue;
+  }
+
   TrackItem? search(String id) {
     for (final child in children) {
       if (child.id == id) {

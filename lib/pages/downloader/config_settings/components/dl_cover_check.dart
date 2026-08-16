@@ -11,11 +11,11 @@ class DlCoverCheck extends ConsumerWidget {
     final dlCover = ref.watch(dlCoverProvider);
     return Row(
       children: [
-        const Text('下载封面'),
         Checkbox(
           value: dlCover,
           onChanged: ref.read(uiServiceProvider).onDlCoverChanged,
         ),
+        const Text('下载封面'),
       ],
     );
   }

@@ -1,5 +1,7 @@
+import 'package:asmr_downloader/common/config_providers.dart';
 import 'package:asmr_downloader/pages/components/empty_state.dart';
 import 'package:asmr_downloader/pages/downloader/search_result/tracks_view/components/download_progress/download_progress.dart';
+import 'package:asmr_downloader/pages/downloader/search_result/tracks_view/components/extension_filter_bar.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/pages/downloader/search_result/tracks_view/components/tracks.dart';
 import 'package:asmr_downloader/services/ui/ui_providers.dart';
@@ -16,6 +18,7 @@ class TracksView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appWidth = MediaQuery.of(context).size.width;
     final tracksLoadingState = ref.watch(tracksLoadingStateProvider);
+    final showExtFilter = ref.watch(showExtFilterProvider).valueOrNull ?? true;
     return SizedBox(
       width: appWidth * 0.6,
       child: Padding(
@@ -32,8 +35,10 @@ class TracksView extends ConsumerWidget {
           }
 
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DownloadProgress(tracksLPadding: _tracksLPadding),
+              if (showExtFilter) const ExtensionFilterBar(),
               Expanded(
                 child: Tracks(
                   rootFolder: rootFolder,
