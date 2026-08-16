@@ -22,8 +22,10 @@ class ProgressBar extends ConsumerWidget {
         Positioned.fill(
           left: 10,
           right: 10,
-          bottom: 1,
-          child: Row(children: ellipsisInMiddle(currentFileName)),
+          child: Transform.translate(
+            offset: const Offset(0, -1.5),
+            child: Row(children: ellipsisInMiddle(currentFileName)),
+          ),
         ),
       ]),
     );

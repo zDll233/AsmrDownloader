@@ -15,21 +15,16 @@ class AsmrApiChannel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final apiChannel = ref.watch(apiChannelProvider);
-    return SizedBox(
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: DropdownButton<String>(
-          value: apiChannel,
-          focusColor: Colors.transparent,
-          items: _dropdownItems.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: ref.read(uiServiceProvider).onApiChannelChoosed,
-        ),
-      ),
+    return DropdownButton<String>(
+      value: apiChannel,
+      focusColor: Colors.transparent,
+      items: _dropdownItems.map((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
+      onChanged: ref.read(uiServiceProvider).onApiChannelChoosed,
     );
   }
 }

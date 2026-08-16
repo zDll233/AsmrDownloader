@@ -6,46 +6,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class DownloadPathPicker extends ConsumerWidget {
   const DownloadPathPicker({super.key});
 
-  final Color _color = Colors.white70;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dlPath = ref.watch(downloadPathProvider);
     return SizedBox(
       height: 50.0,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 250,
-              child: TextField(
-                enabled: false,
-                cursorColor: _color,
-                decoration: InputDecoration(
-                  hintText: dlPath.isEmpty ? '选择下载路径' : dlPath,
-                  border: OutlineInputBorder(),
-                  focusedBorder:
-                      OutlineInputBorder(borderSide: BorderSide(color: _color)),
-                ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 250,
+            child: TextField(
+              enabled: false,
+              decoration: InputDecoration(
+                hintText: dlPath.isEmpty ? '选择下载路径' : dlPath,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
-              child: IconButton(
-                onPressed: ref.read(uiServiceProvider).pickDlPath,
-                icon: const Icon(Icons.folder),
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 2.0),
+            child: IconButton(
+              onPressed: ref.read(uiServiceProvider).pickDlPath,
+              tooltip: '选择下载路径',
+              icon: const Icon(Icons.folder),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
-              child: IconButton(
-                onPressed: ref.read(uiServiceProvider).openFolder,
-                icon: const Icon(Icons.folder_open),
-              ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 2.0),
+            child: IconButton(
+              onPressed: ref.read(uiServiceProvider).openFolder,
+              tooltip: '打开文件夹',
+              icon: const Icon(Icons.folder_open),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

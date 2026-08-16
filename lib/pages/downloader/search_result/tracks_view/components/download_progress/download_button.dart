@@ -14,6 +14,7 @@ class DownloadButton extends ConsumerWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
+      alignment: Alignment.center,
       decoration: ShapeDecoration(
         color: downloading ? Colors.grey : Colors.pink[200],
         shape: const StadiumBorder(),
@@ -27,9 +28,12 @@ class DownloadButton extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             alignment: Alignment.center,
-            child: Text(
-              downloading ? '下载中' : '下载',
-              style: const TextStyle(color: Colors.white70),
+            child: Transform.translate(
+              offset: const Offset(0, -1.5),
+              child: Text(
+                downloading ? '下载中' : '下载',
+                style: const TextStyle(color: Colors.white70),
+              ),
             ),
           ),
         ),

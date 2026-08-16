@@ -9,19 +9,14 @@ class DlCoverCheck extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dlCover = ref.watch(dlCoverProvider);
-    return SizedBox(
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: Row(
-          children: [
-            const Text('下载封面'),
-            Checkbox(
-              value: dlCover,
-              onChanged: ref.read(uiServiceProvider).onDlCoverChanged,
-            ),
-          ],
+    return Row(
+      children: [
+        const Text('下载封面'),
+        Checkbox(
+          value: dlCover,
+          onChanged: ref.read(uiServiceProvider).onDlCoverChanged,
         ),
-      ),
+      ],
     );
   }
 }

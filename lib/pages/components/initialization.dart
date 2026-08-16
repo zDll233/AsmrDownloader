@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:asmr_downloader/common/config_providers.dart';
 import 'package:asmr_downloader/common/const.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
 import 'package:asmr_downloader/services/ui/ui_providers.dart';
+import 'package:asmr_downloader/services/window_size_guard.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,9 +18,15 @@ class Initialization extends ConsumerStatefulWidget {
 }
 
 class _InitializationState extends ConsumerState<Initialization> {
+  WindowSizeGuard? _windowSizeGuard;
+
   @override
   void initState() {
     super.initState();
+    // Windows 偶发 view/窗口尺寸不同步, 启动后自愈一次
+    if (Platform.isWindows) {
+      _windowSizeGuard = WindowSizeGuard();
+    }
     // init
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // startup search
@@ -28,6 +37,7 @@ class _InitializationState extends ConsumerState<Initialization> {
 
   @override
   void dispose() {
+    _windowSizeGuard?.dispose();
     // dispose
     super.dispose();
   }

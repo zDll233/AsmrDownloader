@@ -14,7 +14,6 @@ class SearchBox extends ConsumerStatefulWidget {
 
 class SearchBoxState extends ConsumerState<SearchBox> {
   final TextEditingController _controller = TextEditingController();
-  final Color _color = Colors.white70;
   String _inputText = '';
 
   @override
@@ -45,51 +44,46 @@ class SearchBoxState extends ConsumerState<SearchBox> {
 
     return SizedBox(
       height: 50.0,
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 150,
-              child: TextField(
-                controller: _controller,
-                cursorColor: _color,
-                decoration: InputDecoration(
-                  hintText: '输入sourceId',
-                  border: OutlineInputBorder(),
-                  focusedBorder:
-                      OutlineInputBorder(borderSide: BorderSide(color: _color)),
-                ),
-                onChanged: (value) => _inputText = value,
-                onSubmitted: (_) => downloading
-                    ? null
-                    : ref.read(uiServiceProvider).search(_inputText),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 150,
+            child: TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: '输入sourceId',
               ),
+              onChanged: (value) => _inputText = value,
+              onSubmitted: (_) => downloading
+                  ? null
+                  : ref.read(uiServiceProvider).search(_inputText),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 5.0),
-              child: IconButton(
-                onPressed: downloading
-                    ? null
-                    : () => ref.read(uiServiceProvider).search(_inputText),
-                icon: Icon(Icons.search),
-              ),
-            ),
-            IconButton(
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 2.0),
+            child: IconButton(
               onPressed: downloading
                   ? null
-                  : () async {
-                      final newSearchText =
-                          await ref.read(uiServiceProvider).pasteAndSearch();
-                      if (newSearchText != null) {
-                        _controller.text = newSearchText;
-                        _inputText = newSearchText;
-                      }
-                    },
-              icon: Icon(Icons.content_paste_go),
+                  : () => ref.read(uiServiceProvider).search(_inputText),
+              tooltip: '搜索',
+              icon: Icon(Icons.search),
             ),
-          ],
-        ),
+          ),
+          IconButton(
+            onPressed: downloading
+                ? null
+                : () async {
+                    final newSearchText =
+                        await ref.read(uiServiceProvider).pasteAndSearch();
+                    if (newSearchText != null) {
+                      _controller.text = newSearchText;
+                      _inputText = newSearchText;
+                    }
+                  },
+            tooltip: '粘贴并搜索',
+            icon: Icon(Icons.content_paste_go),
+          ),
+        ],
       ),
     );
   }

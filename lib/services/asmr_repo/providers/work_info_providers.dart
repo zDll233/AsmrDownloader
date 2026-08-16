@@ -89,7 +89,9 @@ final tagLsProvider = Provider<List<String>>((ref) {
         return [];
       }
       return (data['tags'] as List)
-          .map((e) => e['i18n']['zh-cn']['name'].toString())
+          .map((e) => e['i18n']?['zh-cn']?['name']?.toString())
+          .whereType<String>()
+          .where((e) => e.isNotEmpty)
           .toList();
     },
     orElse: () => [],

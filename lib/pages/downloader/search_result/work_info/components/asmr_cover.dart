@@ -8,6 +8,8 @@ import 'package:transparent_image/transparent_image.dart';
 class AsmrCover extends ConsumerWidget {
   const AsmrCover({super.key});
 
+  static const _radius = 12.0;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final coverLoadingState = ref.watch(coverLoadingStateProvider);
@@ -16,9 +18,25 @@ class AsmrCover extends ConsumerWidget {
         if (bytes == null) {
           return const Icon(Icons.error, color: Colors.red);
         }
-        return FadeInImage(
-            placeholder: MemoryImage(kTransparentImage),
-            image: MemoryImage(bytes));
+        return Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(_radius),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: FadeInImage(
+              placeholder: MemoryImage(kTransparentImage),
+              image: MemoryImage(bytes)),
+        );
       },
       loading: () => const SizedBox(
         width: 24,

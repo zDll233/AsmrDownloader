@@ -9,19 +9,14 @@ class AsmrProxy extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final proxy = ref.watch(proxyProvider);
-    return SizedBox(
-      child: Padding(
-        padding: const EdgeInsets.only(left: 20.0),
-        child: Row(
-          children: [
-            const Text('启用代理'),
-            Checkbox(
-              value: proxy != 'DIRECT',
-              onChanged: ref.read(uiServiceProvider).onProxyChanged,
-            ),
-          ],
+    return Row(
+      children: [
+        const Text('启用代理'),
+        Checkbox(
+          value: proxy != 'DIRECT',
+          onChanged: ref.read(uiServiceProvider).onProxyChanged,
         ),
-      ),
+      ],
     );
   }
 }

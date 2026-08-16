@@ -19,6 +19,7 @@ dependencies:
   flutter_riverpod: ^2.5.1
   intl: any
   logger: ^2.4.0
+  mcp_toolkit: ^3.0.0
   path: ^1.9.0
   path_provider: ^2.1.4
   transparent_image: ^2.0.1

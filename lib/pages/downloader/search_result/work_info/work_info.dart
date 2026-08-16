@@ -1,3 +1,4 @@
+import 'package:asmr_downloader/pages/components/empty_state.dart';
 import 'package:asmr_downloader/pages/downloader/search_result/work_info/components/asmr_cv.dart';
 import 'package:asmr_downloader/pages/downloader/search_result/work_info/components/asmr_misc_info.dart';
 import 'package:asmr_downloader/pages/downloader/search_result/work_info/components/asmr_tags.dart';
@@ -27,7 +28,10 @@ class WorkInfo extends ConsumerWidget {
         child: workInfoLoadingState.when(
           data: (data) {
             if (data == null) {
-              return const Text('No work info');
+              return const EmptyState(
+                icon: Icons.album_outlined,
+                text: 'No work info',
+              );
             }
             return MoveWindow(
               moveOnChildWidget: true,

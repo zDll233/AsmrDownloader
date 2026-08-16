@@ -4,14 +4,17 @@ import 'package:asmr_downloader/pages/components/initialization.dart';
 import 'package:asmr_downloader/pages/downloader/downloader.dart';
 import 'package:asmr_downloader/pages/window_title_bar/move_window.dart';
 import 'package:asmr_downloader/pages/window_title_bar/window_title_bar.dart';
+import 'package:asmr_downloader/services/ui/theme/theme_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(appThemeProvider);
     return Initialization(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -24,13 +27,7 @@ class MyApp extends StatelessWidget {
           Locale('en', 'US'), // English
           Locale('zh', 'CN'), // Chinese
         ],
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.purple,
-            dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
-            brightness: Brightness.dark,
-          ),
-        ),
+        theme: theme,
         scrollBehavior: MyCustomScrollBehavior(),
         home: const Scaffold(
           backgroundColor: Colors.transparent,
