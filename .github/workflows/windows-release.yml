@@ -27,8 +27,17 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Set pubspec version from tag
+        shell: pwsh
+        run: |
+          $v = "${{ env.VERSION }}" -replace '^v', ''
+          (Get-Content pubspec.yaml) | ForEach-Object {
+            if ($_ -match '^version:') { "version: $v" } else { $_ }
+          } | Set-Content pubspec.yaml -Encoding utf8
+          Get-Content pubspec.yaml | Select-Object -First 6
+
       - name: Build Windows Release
-        run: flutter build windows --release
+        run: flutter build windows --release --dart-define=APP_VERSION=${{ env.VERSION }}
 
       - name: Compress Release Folder
         shell: pwsh
