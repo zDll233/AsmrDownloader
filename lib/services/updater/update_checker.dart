@@ -35,7 +35,8 @@ void _launchHidden(String file, String arguments) {
   }
 }
 
-/// 当前应用版本 (CI 构建时通过 --dart-define=APP_VERSION 注入, 本地为 dev)。
+/// 当前应用版本: CI 构建时通过 `--dart-define=APP_VERSION=<tag>` 注入,
+/// 本地构建为 dev。按 tag 原样展示 (如 `v0.2.11`), 与 Release tag 一致。
 const String kAppVersion =
     String.fromEnvironment('APP_VERSION', defaultValue: 'dev');
 

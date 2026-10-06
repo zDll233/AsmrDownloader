@@ -27,18 +27,20 @@ void main() {
   });
 
   group('kAppVersion', () {
-    test('去掉 tag 的 v 前缀', () {
-      expect(kAppVersion.startsWith('v'), isFalse);
-    });
-
-    test('未注入 dart-define 时为 dev', () {
+    test('注入 dart-define 时保留 tag 原文 (设置界面展示 v0.2.11 形式)', () {
       const injected = String.fromEnvironment('APP_VERSION', defaultValue: '');
       if (injected.isEmpty) {
+        // 本地构建未注入
         expect(kAppVersion, 'dev');
       } else {
-        expect(kAppVersion, injected.replaceFirst(RegExp(r'^v'), ''));
-        expect(kAppVersion, isNot('dev'));
+        expect(kAppVersion, injected);
+        expect(kAppVersion, startsWith('v'));
       }
+    });
+
+    test('版本比较忽略 v 前缀', () {
+      expect(compareVersions('v0.2.11', '0.2.11'), 0);
+      expect(compareVersions('0.2.11', 'v0.2.11'), 0);
     });
   });
 
@@ -49,8 +51,8 @@ void main() {
     });
 
     test('与当前版本相同则无更新', () {
-      final result = UpdateCheckResult(latestTag: 'v$kAppVersion');
-      expect(result.hasUpdate, isFalse);
+      final tag = kAppVersion.startsWith('v') ? kAppVersion : 'v$kAppVersion';
+      expect(UpdateCheckResult(latestTag: tag).hasUpdate, isFalse);
     });
   });
 }

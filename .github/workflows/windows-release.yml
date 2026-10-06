@@ -36,8 +36,11 @@ jobs:
           } | Set-Content pubspec.yaml -Encoding utf8
           Get-Content pubspec.yaml | Select-Object -First 6
 
+      - name: Run Tests (校验注入版本号)
+        run: flutter test --dart-define=APP_VERSION=${{ env.VERSION }}
+
       - name: Build Windows Release
-        run: flutter build windows --release --dart-define=APP_VERSION=${{ env.VERSION }}
+        run: flutter build windows --release --dart-define="APP_VERSION=${{ env.VERSION }}"
 
       - name: Compress Release Folder
         shell: pwsh
