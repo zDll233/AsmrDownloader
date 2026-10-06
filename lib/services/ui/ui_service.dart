@@ -7,6 +7,7 @@ import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart'
 import 'package:asmr_downloader/services/asmr_repo/providers/tracks_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/work_info_providers.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
+import 'package:asmr_downloader/services/ui/system_proxy_reader.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
 import 'package:asmr_downloader/utils/tool_functions.dart';
 import 'package:asmr_downloader/utils/log.dart';
@@ -80,7 +81,11 @@ class UIService {
   Future<void> onProxyChanged(bool? value) async {
     if (value == null) return;
 
-    final proxy = value ? SystemProxyConfig.systemProxy : 'DIRECT';
+    // 与设置界面的可用性检测使用同一个读取器, 保证行为一致
+    final proxy = value
+        ? SystemProxyConfig.formatProxy(
+            ref.read(systemProxyConfigReaderProvider)().proxy)
+        : 'DIRECT';
 
     if (proxy == ref.read(proxyProvider)) return;
 

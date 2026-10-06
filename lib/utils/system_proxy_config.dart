@@ -81,13 +81,19 @@ class SystemProxyConfig {
     }
   }
 
-  /// 返回代理配置 PROXY host:port; PROXY host2:port2; DIRECT, 如果代理地址获取失败则直接返回 DIRECT
-  static String get systemProxy {
-    final proxy = SystemProxyConfig.getConfig().proxy;
-    if (proxy == null || proxy.isEmpty) {
-      return 'DIRECT';
-    }
+  /// 将系统代理地址 (如 `127.0.0.1:7890;127.0.0.1:7891`) 转换为
+  /// HttpClient.findProxy 需要的格式; 未配置代理时返回 DIRECT。
+  static String formatProxy(String? proxy) {
+    if (proxy == null) return 'DIRECT';
 
-    return '${proxy.split(';').map((e) => 'PROXY ${e.trim()}').join('; ')}; DIRECT';
+    final entries =
+        proxy.split(';').map((e) => e.trim()).where((e) => e.isNotEmpty);
+    if (entries.isEmpty) return 'DIRECT';
+
+    return '${entries.map((e) => 'PROXY $e').join('; ')}; DIRECT';
   }
+
+  /// 返回代理配置 PROXY host:port; PROXY host2:port2; DIRECT, 如果代理地址获取失败则直接返回 DIRECT
+  static String get systemProxy =>
+      formatProxy(SystemProxyConfig.getConfig().proxy);
 }
