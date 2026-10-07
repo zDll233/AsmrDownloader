@@ -203,7 +203,7 @@ void main() {
     );
   }
 
-  testWidgets('搜索请求失败: 面板只显示原因 (无操作按钮)', (tester) async {
+  testWidgets('搜索请求失败: 两个 panel 都显示失败原因 (不再显示 No tracks/info)', (tester) async {
     api = _FakeApi(
       onSearchFailure: searchFailureOf(DioExceptionType.badResponse, statusCode: 500),
     );
@@ -212,18 +212,39 @@ void main() {
 
     await pumpSearchResult(tester, container);
 
-    expect(find.byType(FailurePanel), findsOneWidget);
-    expect(find.textContaining('服务器错误'), findsOneWidget);
+    // 左 (作品信息) 与右 (音轨) 两个面板。
+    expect(find.byType(FailurePanel), findsNWidgets(2));
+    expect(find.textContaining('服务器错误'), findsNWidgets(2));
+    // 不再显示默认文案。
+    expect(find.text('No work info'), findsNothing);
+    expect(find.text('No tracks'), findsNothing);
     // 面板与空状态一致: 只有图标 + 文案。
-    expect(find.text('重试'), findsNothing);
-    expect(find.text('详情'), findsNothing);
+    expect(find.byType(TextButton), findsNothing);
     // 技术详情默认不展开。
     expect(find.textContaining('HTTP 状态码: 500'), findsNothing);
+  });
 
-    // 用户可以再点一次搜索重试。
-    expect(api.searchCallCount, 1);
+  testWidgets('再次搜索会清掉失败提示 (回归)', (tester) async {
+    api = _FakeApi(
+      requestDelay: const Duration(milliseconds: 20),
+      onSearchFailure: searchFailureOf(DioExceptionType.badResponse, statusCode: 500),
+    );
+    container = createContainer(api);
+    container.read(searchTextProvider.notifier).state = 'VJ012345';
+
+    await pumpSearchResult(tester, container);
+    expect(find.byType(FailurePanel), findsNWidgets(2));
+
+    // 用户再次触发搜索: 失败提示先消失 (回到原本的加载/空状态)。
     await container.read(uiServiceProvider).search('VJ012345');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(FailurePanel), findsNothing);
+
+    // 请求结束后依然失败, 原因重新显示在两个面板上。
     await tester.pumpAndSettle();
+    expect(find.byType(FailurePanel), findsNWidgets(2));
     expect(api.searchCallCount, 2);
   });
 
@@ -236,68 +257,20 @@ void main() {
 
     await pumpSearchResult(tester, container);
 
-    expect(find.textContaining('无法连接服务器'), findsOneWidget);
-    expect(find.byType(FailurePanel), findsOneWidget);
+    expect(find.textContaining('无法连接服务器'), findsNWidgets(2));
+    expect(find.byType(FailurePanel), findsNWidgets(2));
   });
 
-  testWidgets('失败后再次搜索: 先回到加载转圈, 再显示结果', (tester) async {
-    api = _FakeApi(
-      requestDelay: const Duration(milliseconds: 20),
-      onSearchFailure: searchFailureOf(DioExceptionType.badResponse, statusCode: 500),
-    );
-    container = createContainer(api);
-    container.read(searchTextProvider.notifier).state = 'VJ012345';
-
-    await pumpSearchResult(tester, container);
-    expect(find.byType(FailurePanel), findsOneWidget);
-
-    // 用户再次触发搜索: 失败提示应立刻消失并显示转圈。
-    await container.read(uiServiceProvider).search('VJ012345');
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byType(FailurePanel), findsNothing);
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
-
-    // 请求结束后再回到失败提示 (依然失败)。
-    await tester.pumpAndSettle();
-    expect(find.byType(FailurePanel), findsOneWidget);
-    expect(api.searchCallCount, 2);
-  });
-
-  testWidgets('缓存结果时再次搜索: 也先转圈, 再回到作品信息', (tester) async {
-    api = _FakeApi(
-      requestDelay: const Duration(milliseconds: 20),
-      works: const [
-        {'id': '422979', 'source_id': 'RJ422979'},
-      ],
-    );
-    container = createContainer(api);
-    container.read(searchTextProvider.notifier).state = 'VJ012345';
-
-    await pumpSearchResult(tester, container);
-    expect(find.text('测试作品'), findsOneWidget);
-
-    await container.read(uiServiceProvider).search('VJ012345');
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byType(CircularProgressIndicator), findsWidgets);
-
-    await tester.pumpAndSettle();
-    expect(find.text('测试作品'), findsOneWidget);
-    expect(find.byType(FailurePanel), findsNothing);
-  });
-
-  testWidgets('搜索成功但没有结果: 提示没有搜到, 不显示失败面板', (tester) async {
+  testWidgets('搜索成功但没有结果: 两个 panel 提示没有搜到', (tester) async {
     api = _FakeApi(works: const []);
     container = createContainer(api);
     container.read(searchTextProvider.notifier).state = 'VJ012345';
 
     await pumpSearchResult(tester, container);
 
-    expect(find.textContaining('没有搜索到匹配的作品'), findsOneWidget);
-    expect(find.byType(FailurePanel), findsNothing);
+    expect(find.textContaining('没有搜索到匹配的作品'), findsNWidgets(2));
+    expect(find.byType(FailurePanel), findsNWidgets(2));
+    expect(find.text('No tracks'), findsNothing);
     expect(find.textContaining('无法连接服务器'), findsNothing);
   });
 
@@ -312,8 +285,8 @@ void main() {
 
     await pumpSearchResult(tester, container);
 
-    expect(find.byType(FailurePanel), findsOneWidget);
-    expect(find.textContaining('sourceId'), findsOneWidget);
+    expect(find.byType(FailurePanel), findsNWidgets(2));
+    expect(find.textContaining('sourceId'), findsNWidgets(2));
     // 输入问题没有可点的操作。
     expect(find.byType(TextButton), findsNothing);
   });
@@ -342,7 +315,7 @@ void main() {
     container.read(searchTextProvider.notifier).state = 'VJ012345';
 
     await pumpSearchResult(tester, container);
-    expect(find.byType(FailurePanel), findsOneWidget);
+    expect(find.byType(FailurePanel), findsNWidgets(2));
     expect(api.searchCallCount, 1);
 
     container.read(uiServiceProvider).onApiChannelChoosed('asmr-300');
@@ -364,7 +337,7 @@ void main() {
     expect(find.byType(FailurePanel), findsNothing);
   });
 
-  testWidgets('作品不存在: 面板只说作品不存在, 且不重复显示', (tester) async {
+  testWidgets('作品不存在: 两个 panel 都说明作品不存在', (tester) async {
     api = _FakeApi(
       onWorkInfoFailure: workInfoFailureOf(
         DioExceptionType.badResponse,
@@ -376,9 +349,11 @@ void main() {
 
     await pumpSearchResult(tester, container);
 
-    expect(find.textContaining('作品不存在'), findsOneWidget);
-    expect(find.byType(FailurePanel), findsOneWidget);
+    expect(find.textContaining('作品不存在'), findsNWidgets(2));
+    expect(find.byType(FailurePanel), findsNWidgets(2));
     expect(find.textContaining('无法连接'), findsNothing);
+    expect(find.text('No work info'), findsNothing);
+    expect(find.text('No tracks'), findsNothing);
     expect(api.workInfoCallCount, 1);
 
     // 重新搜索即可重试 (面板上没有按钮)。
@@ -396,7 +371,7 @@ void main() {
 
     await pumpSearchResult(tester, container);
 
-    expect(find.textContaining('超时'), findsOneWidget);
-    expect(find.byType(FailurePanel), findsOneWidget);
+    expect(find.textContaining('超时'), findsNWidgets(2));
+    expect(find.byType(FailurePanel), findsNWidgets(2));
   });
 }

@@ -42,13 +42,3 @@ final coverLoadingStateProvider = Provider<AsyncValue>(
     ref.watch(coverBytesProvider),
   ),
 );
-
-/// 搜索链路是否正在请求 (搜索接口 / 作品信息任一在跑)。
-///
-/// 失败后再次搜索时, 失败状态会先被清掉, 此时还没有"作品信息"请求
-/// (非 RJ 输入要先拿到 id), 只看 [workInfoLoadingStateProvider] 会
-/// 短暂落空; 这里把搜索接口本身的加载也算进来。
-final searchLoadingProvider = Provider<bool>((ref) {
-  return ref.watch(searchResultProvider).isLoading ||
-      ref.watch(workInfoLoadingStateProvider).isLoading;
-});

@@ -22,7 +22,6 @@ class WorkInfo extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appWidth = MediaQuery.of(context).size.width;
     final workInfoLoadingState = ref.watch(workInfoLoadingStateProvider);
-    final phase = ref.watch(searchPhaseProvider);
     final failure = ref.watch(failureProvider);
     return SizedBox(
       width: appWidth * 0.4,
@@ -32,15 +31,9 @@ class WorkInfo extends ConsumerWidget {
         child: workInfoLoadingState.when(
           data: (data) {
             if (data == null) {
-              if (failure != null &&
-                  failure.kind != SearchFailureKind.emptyResult) {
+              // 搜索失败: 这里显示失败原因, 而不是默认的 No work info。
+              if (failure != null) {
                 return FailurePanel(failure: failure);
-              }
-              if (phase == SearchPhase.idle) {
-                return const EmptyState(
-                  icon: Icons.search,
-                  text: '输入 sourceId 开始搜索',
-                );
               }
               return const EmptyState(
                 icon: Icons.album_outlined,
@@ -65,11 +58,7 @@ class WorkInfo extends ConsumerWidget {
             ),
           );
           },
-          loading: () => Center(
-            child: ref.watch(searchLoadingProvider)
-                ? const CircularProgressIndicator()
-                : const SizedBox.shrink(),
-          ),
+          loading: () => Center(child: const CircularProgressIndicator()),
           error: (error, stack) => FailurePanel(
             failure: error is SearchFailureException
                 ? error.failure
