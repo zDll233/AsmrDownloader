@@ -6,6 +6,7 @@ import 'package:asmr_downloader/models/track_item.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/tracks_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/work_info_providers.dart';
+import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/services/ui/system_proxy_reader.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
@@ -34,15 +35,25 @@ class UIService {
     await WindowsTaskbar.setProgress(0, 0);
   }
 
-  String normalizeInput(String sourceId) {
+  String normalizeInput(String sourceId) => normalizeInputStatic(sourceId);
+
+  static String normalizeInputStatic(String sourceId) {
     return sourceId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase();
   }
 
   Future<String?> search(String input) async {
     await resetProgress();
+    clearFailure(ref);
 
     final searchText = normalizeInput(input);
-    if (!isSourceIdValid(searchText)) return null;
+    if (searchText.isEmpty) {
+      setFailure(ref, SearchFailure.invalidInput(input));
+      return null;
+    }
+    if (!isSourceIdValid(searchText)) {
+      setFailure(ref, SearchFailure.invalidInput(input));
+      return null;
+    }
 
     if (searchText == ref.read(searchTextProvider)) {
       // force to refetch
@@ -50,15 +61,81 @@ class UIService {
         ..invalidate(workInfoProvider)
         ..invalidate(rawTracksProvider)
         ..invalidate(coverBytesProvider);
+
+      // 同一输入再搜一次 (用户手动重试) 时搜索请求本身也要重发,
+      // 否则失败会一直停在那里 (非 RJ 才需要, RJ 不走搜索接口)。
+      if (!searchText.startsWith('RJ')) {
+        ref.invalidate(searchResultProvider);
+      }
     } else {
       ref.read(searchTextProvider.notifier).state = searchText;
     }
     return searchText;
   }
 
-  Future<String?> pasteAndSearch() async {
+  /// 让搜索链路按当前输入重新请求一次。
+  ///
+  /// 已经请求失败的阶段直接重跑, 阶段之前的请求不再重复:
+  /// 例如音声文件失败就只重取文件列表。
+  void retry() {
+    final failure = ref.read(failureProvider);
+    final stage = failure?.stage;
+
+    resetProgress();
+    clearFailure(ref);
+
+    if (stage == SearchStage.tracks && ref.read(sourceIdProvider) != null) {
+      ref.invalidate(rawTracksProvider);
+      return;
+    }
+
+    // 其余失败需要重取作品信息 (失败在搜索阶段时连搜索一起重跑)。
+    if (ref.read(sourceIdProvider) == null || stage == SearchStage.search) {
+      invalidateSearch();
+      return;
+    }
+
+    ref
+      ..invalidate(workInfoProvider)
+      ..invalidate(rawTracksProvider);
+  }
+
+  /// 让搜索链路按当前输入重新请求一次。
+  void invalidateSearch() {
+    ref.invalidate(workInfoProvider);
+    ref.invalidate(rawTracksProvider);
+
+    if (ref.read(searchTextProvider)?.startsWith('RJ') ?? false) {
+      return;
+    }
+    ref.invalidate(searchResultProvider);
+  }
+
+  /// 每个词法 token 都必须是合法的 sourceId (可被逗号/空格/换行等分隔)。
+  static bool _tokenizeAsSourceId(String text) {
+    final tokens = text.split(RegExp(r'[\s,，、;；/|]+'))
+      ..removeWhere((e) => e.isEmpty);
+    if (tokens.isEmpty) return false;
+
+    return tokens.every((e) => isSourceIdValid(normalizeInputStatic(e)));
+  }
+
+  /// 读取剪贴板并搜索。
+  ///
+  /// [reportInvalid] 为 false 时, 剪贴板内容不是 sourceId 就静默忽略
+  /// (启动时自动读取剪贴板用; 用户主动点"粘贴并搜索"时仍会提示)。
+  Future<String?> pasteAndSearch({bool reportInvalid = true}) async {
     final clipBoardText = (await Clipboard.getData('text/plain'))?.text;
     if (clipBoardText == null) return null;
+
+    // 剪贴板里没有合法 sourceId: 不打扰用户, 也不改搜索框;
+    // 用户主动点"粘贴并搜索"时给出提示。
+    if (!_tokenizeAsSourceId(clipBoardText)) {
+      if (reportInvalid) {
+        await search(clipBoardText);
+      }
+      return null;
+    }
 
     // set old sourceId to clipboard
     final oldSourceId = ref.read(sourceIdProvider);
@@ -76,6 +153,11 @@ class UIService {
       ..read(apiChannelProvider.notifier).state = newValue
       ..read(configFileProvider).addOrUpdate({'apiChannel': newValue})
       ..read(asmrApiProvider).setApiChannel(newValue);
+
+    // 换频道多半是为了绕开失败, 直接清掉错误并按当前输入重搜。
+    if (ref.read(searchPhaseProvider) == SearchPhase.active) {
+      retry();
+    }
   }
 
   Future<void> onProxyChanged(bool? value) async {

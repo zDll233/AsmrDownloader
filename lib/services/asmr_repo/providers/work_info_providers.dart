@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
+import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/utils/log.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,7 +15,12 @@ final workInfoProvider = FutureProvider<Map<String, dynamic>?>((ref) async {
   }
 
   Log.info('fetch workInfo, id: $id');
-  return api.getWorkInfo(id);
+  try {
+    return await api.getWorkInfo(id);
+  } on SearchFailureException catch (e) {
+    setFailure(ref, e.failure);
+    rethrow;
+  }
 });
 
 final titleProvider = Provider<String>((ref) {

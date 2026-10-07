@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/utils/log.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 
 class AsmrApi {
   final Dio _apiDio = Dio();
@@ -12,6 +13,16 @@ class AsmrApi {
   String _proxy = 'DIRECT';
 
   String get proxy => _proxy;
+
+  /// 当前 api channel (如 asmr-200), 用于失败详情。
+  String get apiChannel =>
+      _apiDio.options.baseUrl.replaceFirst('https://api.', '').split('.').first;
+
+  /// 替换底层 http 适配器 (仅测试用, 避免测试打真实网络)。
+  @visibleForTesting
+  set httpClientAdapter(HttpClientAdapter adapter) {
+    _apiDio.httpClientAdapter = adapter;
+  }
 
   set proxy(String proxy) {
     _proxy = proxy;
@@ -62,43 +73,69 @@ class AsmrApi {
     }
   }
 
-  Future<Response<T>?> _requestWithRetry<T>(
+  /// 发送请求并重试; 失败时抛出 [SearchFailureException] 说明原因,
+  /// 不再把各种失败折叠成 null。
+  Future<Response<T>> _requestWithRetry<T>(
     Future<Response<T>> Function() request, {
     required String method,
     required String path,
+    SearchStage stage = SearchStage.search,
+    bool requireFullMatch = false,
     int maxTry = 3,
   }) async {
-    int tryCount = 0;
+    DioException? lastError;
+    var tryCount = 0;
+
     while (tryCount < maxTry) {
+      tryCount++;
       try {
-        tryCount++;
         final response = await request();
         Log.info('[$method] request to "$path" succeeded');
         return response;
       } on DioException catch (e) {
+        lastError = e;
         Log.warning('[$method] request to "$path" failed\n'
             'current try: $tryCount\n'
             'error: $e');
+
+        // 客户端确定性错误重试没有意义 (4xx / 证书 / 取消)。
+        if (!isRetryableDioException(e)) break;
         await Future.delayed(Duration(seconds: 3));
+      } on SearchFailureException {
+        rethrow;
       } catch (e) {
         Log.error('[$method] request to "$path" failed\n'
             'current try: $tryCount\n'
             'unhandled error: $e');
-        return null;
+        throw SearchFailureException(
+          SearchFailure.of(e, stage: stage, tries: tryCount),
+        );
       }
     }
 
-    Log.error('[$method] request to "$path" failed after $maxTry tries');
-    return null;
+    final failure = SearchFailure.of(
+      lastError ?? 'unknown error',
+      stage: stage,
+      requireFullMatch: requireFullMatch,
+      apiChannel: apiChannel,
+      proxyMode: _proxy,
+      tries: tryCount,
+    );
+
+    Log.error('[$method] request to "$path" failed after $tryCount tries\n'
+        '${failure.technicalDetail}');
+    throw SearchFailureException(failure);
   }
 
-  Future<Response<T>?> get<T>(
+  Future<Response<T>> get<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
     void Function(int, int)? onReceiveProgress,
+    SearchStage stage = SearchStage.search,
+    bool requireFullMatch = false,
     int maxTry = 3,
   }) {
     return _requestWithRetry(
@@ -112,11 +149,13 @@ class AsmrApi {
       ),
       method: 'GET',
       path: path,
+      stage: stage,
+      requireFullMatch: requireFullMatch,
       maxTry: maxTry,
     );
   }
 
-  Future<Response<T>?> post<T>(
+  Future<Response<T>> post<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
@@ -124,6 +163,7 @@ class AsmrApi {
     CancelToken? cancelToken,
     void Function(int, int)? onSendProgress,
     void Function(int, int)? onReceiveProgress,
+    SearchStage stage = SearchStage.search,
     int maxTry = 3,
   }) {
     return _requestWithRetry(
@@ -138,16 +178,18 @@ class AsmrApi {
       ),
       method: 'POST',
       path: path,
+      stage: stage,
       maxTry: maxTry,
     );
   }
 
-  Future<Response<T>?> head<T>(
+  Future<Response<T>> head<T>(
     String path, {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Options? options,
     CancelToken? cancelToken,
+    SearchStage stage = SearchStage.search,
     int maxTry = 3,
   }) {
     return _requestWithRetry(
@@ -160,6 +202,7 @@ class AsmrApi {
       ),
       method: 'HEAD',
       path: path,
+      stage: stage,
       maxTry: maxTry,
     );
   }
@@ -191,7 +234,7 @@ class AsmrApi {
   /// Retrieves the user's profile.
   Future<Map<String, dynamic>?> getProfile() async {
     final response = await get<Map<String, dynamic>>('auth/me');
-    return response?.data;
+    return response.data;
   }
 
   /// Retrieves playlists with pagination and filtering.
@@ -206,7 +249,7 @@ class AsmrApi {
           'pageSize': pageSize,
           'filterBy': filterBy,
         });
-    return response?.data;
+    return response.data;
   }
 
   /// Creates a new playlist.
@@ -223,7 +266,7 @@ class AsmrApi {
       'locale': 'zh-CN',
       'works': [],
     });
-    return response?.data;
+    return response.data;
   }
 
   /// Adds works to a playlist.
@@ -237,7 +280,7 @@ class AsmrApi {
           'id': plId,
           'works': sourceIds,
         });
-    return response?.data;
+    return response.data;
   }
 
   /// Deletes a playlist.
@@ -248,27 +291,46 @@ class AsmrApi {
         await post<Map<String, dynamic>>('playlist/delete-playlist', data: {
       'id': plId,
     });
-    return response?.data;
+    return response.data;
   }
 
-  /// Searches for content.
-  Future<Map<String, dynamic>?> search({
+  /// 搜索作品; 失败抛出 [SearchFailureException]。
+  Future<Map<String, dynamic>> search({
     required String content,
     Map<String, dynamic>? params,
     int maxTry = 3,
   }) async {
-    final response = await get<Map<String, dynamic>>('search/$content',
-        queryParameters: params, maxTry: maxTry);
-    return response?.data;
+    final response = await get<Map<String, dynamic>>(
+      'search/$content',
+      queryParameters: params,
+      stage: SearchStage.search,
+      maxTry: maxTry,
+    );
+
+    final data = response.data;
+    if (data == null) {
+      throw SearchFailureException(
+        SearchFailure(
+          kind: SearchFailureKind.badData,
+          stage: SearchStage.search,
+          apiChannel: apiChannel,
+          proxyMode: _proxy,
+          rawDetail: '响应体为空',
+        ),
+      );
+    }
+    return data;
   }
 
   /// Lists works based on parameters.
   Future<Map<String, dynamic>?> listWorks({
     required Map<String, dynamic> params,
   }) async {
-    final response =
-        await get<Map<String, dynamic>>('works', queryParameters: params);
-    return response?.data;
+    final response = await get<Map<String, dynamic>>(
+      'works',
+      queryParameters: params,
+    );
+    return response.data;
   }
 
   /// Searches by tag name.
@@ -293,20 +355,43 @@ class AsmrApi {
     );
   }
 
-  Future<Map<String, dynamic>?> getWorkInfo(String id) async {
-    final response = await get<Map<String, dynamic>>('work/$id');
-    return response?.data;
+  /// 作品元数据; 失败抛出 [SearchFailureException]。
+  Future<Map<String, dynamic>> getWorkInfo(String id) async {
+    final response = await get<Map<String, dynamic>>(
+      'work/$id',
+      stage: SearchStage.workInfo,
+      requireFullMatch: true,
+    );
+
+    final data = response.data;
+    if (data == null) {
+      throw SearchFailureException(
+        SearchFailure(
+          kind: SearchFailureKind.badData,
+          stage: SearchStage.workInfo,
+          apiChannel: apiChannel,
+          proxyMode: _proxy,
+          rawDetail: '响应体为空 (id: $id)',
+        ),
+      );
+    }
+    return data;
   }
 
-  Future<List<dynamic>?> getTracks(String id) async {
-    final response = await get<List<dynamic>>('tracks/$id');
-    return response?.data;
+  /// 音声文件树; 失败抛出 [SearchFailureException]。
+  Future<List<dynamic>> getTracks(String id) async {
+    final response = await get<List<dynamic>>(
+      'tracks/$id',
+      stage: SearchStage.tracks,
+      requireFullMatch: true,
+    );
+    return response.data ?? const [];
   }
 
   Future<int?> tryGetContentLength(String url) async {
     try {
       final response = await head(url);
-      return int.parse(response!.headers.value('content-length')!);
+      return int.parse(response.headers.value('content-length')!);
     } catch (e) {
       Log.error('get content-length failed\n' 'url: $url\n' 'error: $e');
       return null;
@@ -319,12 +404,7 @@ class AsmrApi {
         url,
         options: Options(responseType: ResponseType.bytes),
       );
-
-      if (response != null) {
-        return Uint8List.fromList(response.data);
-      } else {
-        return null;
-      }
+      return Uint8List.fromList(response.data);
     } catch (e) {
       Log.error('fetch cover image data failed.\n' 'error: $e');
       return null;

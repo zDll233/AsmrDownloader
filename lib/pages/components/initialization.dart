@@ -29,9 +29,9 @@ class _InitializationState extends ConsumerState<Initialization> {
     }
     // init
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // startup search
+      // startup search: 剪贴板内容不是 sourceId 时静默忽略
       await Future.delayed(const Duration(milliseconds: PASTE_SEARCH_DELAY_MS));
-      ref.read(uiServiceProvider).pasteAndSearch();
+      ref.read(uiServiceProvider).pasteAndSearch(reportInvalid: false);
     });
   }
 

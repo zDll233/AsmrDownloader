@@ -39,8 +39,14 @@ class SearchBoxState extends ConsumerState<SearchBox> {
 
   @override
   Widget build(BuildContext context) {
-    final downloading =
-        ref.watch(dlStatusProvider) == DownloadStatus.downloading;
+    // 下载中 / 搜索请求进行中都不接受新的搜索。
+    final busy = ref.watch(dlStatusProvider) == DownloadStatus.downloading ||
+        ref.watch(workInfoLoadingStateProvider).isLoading;
+
+    void submit() {
+      if (busy) return;
+      ref.read(uiServiceProvider).search(_inputText);
+    }
 
     return SizedBox(
       height: 50.0,
@@ -54,23 +60,19 @@ class SearchBoxState extends ConsumerState<SearchBox> {
                 hintText: '输入sourceId',
               ),
               onChanged: (value) => _inputText = value,
-              onSubmitted: (_) => downloading
-                  ? null
-                  : ref.read(uiServiceProvider).search(_inputText),
+              onSubmitted: (_) => submit(),
             ),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 2.0),
             child: IconButton(
-              onPressed: downloading
-                  ? null
-                  : () => ref.read(uiServiceProvider).search(_inputText),
+              onPressed: busy ? null : submit,
               tooltip: '搜索',
               icon: Icon(Icons.search),
             ),
           ),
           IconButton(
-            onPressed: downloading
+            onPressed: busy
                 ? null
                 : () async {
                     final newSearchText =

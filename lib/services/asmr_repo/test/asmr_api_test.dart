@@ -61,17 +61,17 @@ void main() {
           'filterBy': 'all',
         },
       );
-      printFormattedMap(searchResults!);
+      printFormattedMap(searchResults);
     });
 
     test('get work info', () async {
       final workInfo = await api.getWorkInfo('422979');
-      printFormattedMap(workInfo!);
+      printFormattedMap(workInfo);
     });
 
     test('get voice tracks', () async {
       final voiceTracks = await api.getTracks('422979');
-      for (var voiceTrack in voiceTracks!) {
+      for (var voiceTrack in voiceTracks) {
         printFormattedMap(voiceTrack);
       }
     });

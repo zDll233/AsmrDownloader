@@ -1,5 +1,6 @@
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
+import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/utils/log.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,5 +13,10 @@ final rawTracksProvider = FutureProvider<List<dynamic>?>((ref) async {
   }
 
   Log.info('fetch tracks, id: $id');
-  return api.getTracks(id);
+  try {
+    return await api.getTracks(id);
+  } on SearchFailureException catch (e) {
+    setFailure(ref, e.failure);
+    rethrow;
+  }
 });
