@@ -220,7 +220,7 @@ void main() {
     expect(find.text('No tracks'), findsNothing);
     // 面板与空状态一致: 只有图标 + 文案。
     expect(find.byType(TextButton), findsNothing);
-    // 技术详情默认不展开。
+    // 状态码等技术细节只出现在技术详情里, 不放在面板文案上。
     expect(find.textContaining('HTTP 状态码: 500'), findsNothing);
   });
 

@@ -51,7 +51,7 @@ class SearchFailure {
   /// 原始异常描述 / 服务器响应片段, 用于技术详情。
   final String? rawDetail;
 
-  /// 面板标题: 只说清楚问题出在哪。
+  /// 面板标题: 只说清楚问题出在哪 (状态码等技术细节留给 [technicalDetail])。
   String get title {
     switch (kind) {
       case SearchFailureKind.invalidInput:
@@ -65,24 +65,23 @@ class SearchFailure {
       case SearchFailureKind.proxyFailed:
         return '代理不可用（$proxyMode）';
       case SearchFailureKind.badResponse:
-        final label = httpStatusCode == null ? '' : 'HTTP $httpStatusCode：';
         return stage == SearchStage.search
-            ? '服务器拒绝了搜索请求（$label被拦截或请求不合法）'
-            : '服务器拒绝了请求（$label被拦截或请求不合法）';
+            ? '服务器拒绝了搜索请求（被拦截或请求不合法）'
+            : '服务器拒绝了请求（被拦截或请求不合法）';
       case SearchFailureKind.workNotFound:
-        return '作品不存在 (HTTP 404)';
+        return '作品不存在';
       case SearchFailureKind.serverError:
-        return '服务器错误 (HTTP $httpStatusCode)';
+        return '服务器错误';
       case SearchFailureKind.rateLimited:
-        return '请求过于频繁 (HTTP 429)';
+        return '请求过于频繁';
       case SearchFailureKind.badCertificate:
         return 'HTTPS 证书校验失败';
       case SearchFailureKind.badData:
         return '服务器返回的数据异常';
       case SearchFailureKind.unknown:
         return stage == SearchStage.search
-            ? '搜索失败（未识别的原因）'
-            : '${stage.label}失败（未识别的原因）';
+            ? '搜索失败'
+            : '${stage.label}失败';
     }
   }
 

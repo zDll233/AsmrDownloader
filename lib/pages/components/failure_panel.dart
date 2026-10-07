@@ -2,10 +2,10 @@ import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:flutter/material.dart';
 
 /// 失败提示: 与 [EmptyState] 完全一致的居中排版 (图标 + 文案),
-/// 只说清楚问题出在哪, 不带任何操作。
+/// 只说清楚问题出在哪, 界面上不带按钮。
 ///
-/// 技术详情写进日志 (exe 同级 `debug/asmr_downloader.log`),
-/// 需要时可调用 [showFailureDetail] 弹窗查看。
+/// 状态码、api channel、原始错误等细节在 [showFailureDetail] 弹窗里,
+/// 同时写进日志 (exe 同级 `debug/asmr_downloader.log`)。
 class FailurePanel extends StatelessWidget {
   const FailurePanel({
     super.key,
@@ -31,10 +31,16 @@ class FailurePanel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon ?? iconOf(failure.kind),
-            size: iconSize,
-            color: scheme.onSurface.withValues(alpha: 0.5),
+          Tooltip(
+            message: '技术详情',
+            child: GestureDetector(
+              onTap: () => showFailureDetail(context, failure),
+              child: Icon(
+                icon ?? iconOf(failure.kind),
+                size: iconSize,
+                color: scheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
           ),
           const SizedBox(height: gapAfterIcon),
           ConstrainedBox(
