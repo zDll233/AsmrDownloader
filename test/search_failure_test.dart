@@ -77,13 +77,13 @@ void main() {
       expect(classifyDioException(e), SearchFailureKind.noNetwork);
     });
 
-    test('服务器 5xx -> 服务器错误 (状态码只进技术详情)', () {
+    test('服务器 5xx -> 服务器错误 (状态码在括号里)', () {
       final e = dioFailure(DioExceptionType.badResponse, statusCode: 502);
       expect(classifyDioException(e), SearchFailureKind.serverError);
 
       final failure = SearchFailure.of(e, stage: SearchStage.tracks);
-      expect(failure.title, '服务器错误');
-      expect(failure.title, isNot(contains('502')));
+      expect(failure.title, '服务器错误（502）');
+      expect(failure.title, isNot(contains('HTTP')));
       expect(failure.httpStatusCode, 502);
       expect(failure.technicalDetail, contains('HTTP 状态码: 502'));
     });
@@ -101,10 +101,10 @@ void main() {
         stage: SearchStage.workInfo,
         requireFullMatch: true,
       );
-      expect(failure.title, '作品不存在');
+      expect(failure.title, '作品不存在（404）');
     });
 
-    test('4xx -> 服务器拒绝了请求', () {
+    test('4xx -> 服务器拒绝了请求 (只带状态码)', () {
       final e = dioFailure(
         DioExceptionType.badResponse,
         statusCode: 403,
@@ -113,8 +113,8 @@ void main() {
       expect(classifyDioException(e), SearchFailureKind.badResponse);
 
       final failure = SearchFailure.of(e, stage: SearchStage.search);
-      expect(failure.title, contains('服务器拒绝了搜索请求'));
-      expect(failure.title, isNot(contains('403')));
+      expect(failure.title, '服务器拒绝了搜索请求（403）');
+      expect(failure.title, isNot(contains('HTTP')));
       // 状态码与响应体片段进技术详情, 便于定位是不是风控页面。
       expect(failure.technicalDetail, contains('HTTP 状态码: 403'));
       expect(failure.technicalDetail, contains('cloudflare'));

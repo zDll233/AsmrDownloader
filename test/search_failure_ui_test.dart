@@ -220,8 +220,9 @@ void main() {
     expect(find.text('No tracks'), findsNothing);
     // 面板与空状态一致: 只有图标 + 文案。
     expect(find.byType(TextButton), findsNothing);
-    // 状态码等技术细节只出现在技术详情里, 不放在面板文案上。
-    expect(find.textContaining('HTTP 状态码: 500'), findsNothing);
+    // 状态码写在括号里 (不写 "HTTP"), 原始错误只在技术详情里。
+    expect(find.textContaining('服务器错误（500）'), findsNWidgets(2));
+    expect(find.textContaining('HTTP'), findsNothing);
   });
 
   testWidgets('再次搜索会清掉失败提示 (回归)', (tester) async {
