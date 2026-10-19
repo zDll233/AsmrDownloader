@@ -99,6 +99,21 @@ class _MaximizeButtonState extends ConsumerState<MaximizeButton>
     ref.read(uiServiceProvider).onExit(context);
   }
 
+  // 最大化/还原后必须重建, 否则按钮图标停留在旧状态
+  // (最大化后仍显示"最大化"图标, 再点一次等于重复最大化, 看起来像按钮失灵)。
+  @override
+  void onWindowMaximize() => _refresh();
+
+  @override
+  void onWindowUnmaximize() => _refresh();
+
+  @override
+  void onWindowRestore() => _refresh();
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<bool>(

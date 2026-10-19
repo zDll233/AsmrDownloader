@@ -31,6 +31,16 @@ Future<void> setupWindow(List<String> args) async {
       titleBarStyle: TitleBarStyle.hidden,
     );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
+      // 隐藏系统原生的窗口按钮 (去掉窗口样式里的 WS_SYSMENU)。
+      // 标题栏是本项目用 Flutter 自绘的 (TitleBarStyle.hidden), 但窗口样式
+      // 里仍带着 WS_CAPTION/WS_SYSMENU, 最大化时 DWM 会在窗口右上角再画一套
+      // 原生的 最小化/最大化/关闭 按钮; Flutter 自绘的那一套画在客户区里,
+      // 最大化时客户区相对窗口有偏移, 于是两套按钮错开几个像素重叠在一起。
+      // 必须在 show 之前隐藏, 否则窗口出现的第一帧会闪一下原生按钮。
+      await Window.hideWindowControls();
+      // 重新应用一次标题栏样式: SetWindowPos(SWP_FRAMECHANGED) 会触发 DWM
+      // 按新样式重算非客户区, 让原生按钮立即消失。
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
       windowManager
         ..setMinimumSize(initialSize)
         ..setTitle('AsmrDownloader')
