@@ -6,13 +6,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final uiServiceProvider = Provider((ref) => UIService(ref));
 
-/// 依次合并两个异步状态: 先传播错误, 再传播加载中。
+/// 依次合并两个异步状态: 已落定的错误优先, 其次传播加载中, 最后取数据。
 ///
-/// 之前 error 只由第一个状态决定, 上游返回 `data(null)` 时错误会丢失,
-/// 界面就停在"没有内容"而看不到失败原因。
+/// 注意"刷新中的旧错误"不能算错误: `invalidate` 触发的重算里, Riverpod
+/// 会把上一次的错误带进新的 state (`AsyncError(isLoading: true)`), 而
+/// `when` 默认 `skipLoadingOnRefresh: true` 会跳过 loading、直接渲染旧
+/// error。若把它当错误, 重新搜索时面板就会一直停在旧提示上, 看不到转圈。
+/// 所以只有 `!isLoading` 的错误才向下传播。
+///
+/// 已经落定的错误仍然优先于另一个正在加载的状态 (之前"上游返回 data(null)
+/// 时错误丢失"的问题由下面的错误分支兜住)。
 AsyncValue combineStates(AsyncValue asyncValue1, AsyncValue asyncValue2) {
-  if (asyncValue1.hasError) return asyncValue1;
-  if (asyncValue2.hasError) return asyncValue2;
+  final error1 = asyncValue1.hasError && !asyncValue1.isLoading;
+  final error2 = asyncValue2.hasError && !asyncValue2.isLoading;
+  if (error1) return asyncValue1;
+  if (error2) return asyncValue2;
+
   if (asyncValue1.isLoading ||
       asyncValue2.isLoading ||
       asyncValue1.isRefreshing ||

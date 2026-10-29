@@ -256,6 +256,24 @@ void main() {
       );
     });
 
+    test('刷新中的旧错误不压过加载 (重搜时能看到转圈)', () {
+      // invalidate 后的状态: 上一次 error 被带进新的 state, isLoading 为 true。
+      final refreshingError = const AsyncLoading<int>().copyWithPrevious(
+        AsyncError<int>(Exception('boom'), StackTrace.empty),
+      );
+      expect(refreshingError.hasError, isTrue);
+      expect(refreshingError.isLoading, isTrue);
+
+      expect(
+        combineStates(refreshingError, const AsyncData<int?>(null)),
+        isA<AsyncLoading>(),
+      );
+      expect(
+        combineStates(const AsyncData<int?>(null), refreshingError),
+        isA<AsyncLoading>(),
+      );
+    });
+
     test('加载中优先于数据', () {
       expect(
         combineStates(const AsyncData<int>(1), const AsyncLoading<int>()),

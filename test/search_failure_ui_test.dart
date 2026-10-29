@@ -249,6 +249,35 @@ void main() {
     expect(api.searchCallCount, 2);
   });
 
+  testWidgets('作品信息失败后再次搜索: 先显示加载中, 而不是停在旧错误上', (tester) async {
+    api = _FakeApi(
+      requestDelay: const Duration(milliseconds: 20),
+      onWorkInfoFailure: workInfoFailureOf(
+        DioExceptionType.badResponse,
+        statusCode: 404,
+      ),
+    );
+    container = createContainer(api);
+    setRjSearch(container, 'RJ99999999');
+
+    await pumpSearchResult(tester, container);
+    expect(find.textContaining('作品不存在'), findsNWidgets(2));
+
+    // 同一个 sourceId 再点一次搜索 (走 invalidate 的刷新路径)。
+    await container.read(uiServiceProvider).search('RJ99999999');
+    await tester.pump();
+    await tester.pump();
+
+    // 请求还在飞: 面板应该回到加载转圈, 而不是继续显示旧错误。
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
+    expect(find.byType(FailurePanel), findsNothing);
+
+    // 请求结束仍然失败, 错误重新展示。
+    await tester.pumpAndSettle();
+    expect(find.byType(FailurePanel), findsNWidgets(2));
+    expect(api.workInfoCallCount, 2);
+  });
+
   testWidgets('无法连接服务器: 面板直接说明是本机网络问题', (tester) async {
     api = _FakeApi(
       onSearchFailure: searchFailureOf(DioExceptionType.connectionError),
