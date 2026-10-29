@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:asmr_downloader/utils/locked_file_output.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
@@ -21,25 +22,22 @@ class Log {
                 methodCount: 0,
                 colors: false,
                 dateTimeFormat: DateTimeFormat.dateAndTime),
-            output: FileOutput(file: _getLogFile()),
+            output: LockedFileOutput(file: _logFile()),
             level: Level.info,
           );
   }
 
-  File _getLogFile() {
-    final logFilePath = p.join('debug', 'asmr_downloader.log');
-    final logFile = File(logFilePath);
-
-    if (!logFile.existsSync()) {
-      logFile.createSync(recursive: true);
+  /// 日志文件: exe 同级的 `debug/asmr_downloader.log`。
+  ///
+  /// 多开时所有实例共用这一个文件, 写入由 [LockedFileOutput] 加跨进程锁
+  /// 串行化; 超过 5 MB 时持锁轮转成 `.old` (只保留一代)。
+  static File _logFile() {
+    final logFile = File(p.join('debug', 'asmr_downloader.log'));
+    try {
+      logFile.parent.createSync(recursive: true);
+    } catch (_) {
+      // 目录创建失败留给写入时再报, 不影响启动。
     }
-
-    if (logFile.lengthSync() > 1024 * 1024 * 5) {
-      try {
-        logFile.renameSync('$logFilePath.old');
-      } catch (_) {}
-    }
-
     return logFile;
   }
 
