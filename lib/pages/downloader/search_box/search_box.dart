@@ -1,4 +1,3 @@
-import 'package:asmr_downloader/common/const.dart';
 import 'package:asmr_downloader/models/track_item.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/services/ui/ui_providers.dart';
@@ -15,24 +14,30 @@ class SearchBox extends ConsumerStatefulWidget {
 class SearchBoxState extends ConsumerState<SearchBox> {
   final TextEditingController _controller = TextEditingController();
   String _inputText = '';
-
+  ProviderSubscription<String?>? _searchTextSubscription;
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await Future.delayed(
-          const Duration(milliseconds: PASTE_SEARCH_DELAY_MS + 20));
-      final currentSearchText = ref.read(searchTextProvider);
-      if (currentSearchText != null) {
-        _controller.text = currentSearchText;
-        _inputText = currentSearchText;
-      }
-    });
+    // 启动搜索 (选中文本/剪贴板) 的结果会写进 searchTextProvider。
+    // 监听它而不是用延时轮询: 搜索什么时候跑完是不确定的, 延时只是碰运气。
+    _syncFromSearchText(ref.read(searchTextProvider));
+    _searchTextSubscription = ref.listenManual<String?>(
+      searchTextProvider,
+      (_, next) => _syncFromSearchText(next),
+    );
+  }
+
+  /// 把 provider 里的 sourceId 回填到输入框 (用户正在输入时不要打断)。
+  void _syncFromSearchText(String? searchText) {
+    if (searchText == null || searchText == _inputText) return;
+    _controller.text = searchText;
+    _inputText = searchText;
   }
 
   @override
   void dispose() {
+    _searchTextSubscription?.close();
     _controller.dispose();
     super.dispose();
   }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:asmr_downloader/common/config_providers.dart';
@@ -8,6 +9,8 @@ import 'package:asmr_downloader/services/asmr_repo/providers/tracks_providers.da
 import 'package:asmr_downloader/services/asmr_repo/providers/work_info_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
+import 'package:asmr_downloader/services/ui/launch_inputs.dart';
+import 'package:asmr_downloader/services/ui/ui_providers.dart';
 import 'package:asmr_downloader/services/ui/system_proxy_reader.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
 import 'package:asmr_downloader/utils/tool_functions.dart';
@@ -18,6 +21,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:win32/win32.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
 
 import 'package:path/path.dart' as p;
@@ -32,7 +36,14 @@ class UIService {
       ..read(currentDlNoProvider.notifier).state = 0
       ..read(totalTaskCntProvider.notifier).state = 0
       ..read(currentFileNameProvider.notifier).state = '';
-    await WindowsTaskbar.setProgress(0, 0);
+
+    // 任务栏进度只是装饰: 平台通道在启动早期(或某些环境下)可能一直不返回,
+    // 绝不能因此把整个搜索卡住。这里不等结果, 失败也忽略。
+    unawaited(
+      WindowsTaskbar.setProgress(0, 0).catchError((Object e, StackTrace s) {
+        Log.error('setProgress failed.\n$e');
+      }),
+    );
   }
 
   String normalizeInput(String sourceId) => normalizeInputStatic(sourceId);
@@ -120,15 +131,20 @@ class UIService {
     return tokens.every((e) => isSourceIdValid(normalizeInputStatic(e)));
   }
 
-  /// 读取剪贴板并搜索。
+  /// 用户主动点"粘贴并搜索": 先看选中文本, 再看剪贴板。
   ///
-  /// [reportInvalid] 为 false 时, 剪贴板内容不是 sourceId 就静默忽略
-  /// (启动时自动读取剪贴板用; 用户主动点"粘贴并搜索"时仍会提示)。
+  /// 和启动时的自动搜索不同, 这里读的是"此刻"的实时状态 —— 用户可能刚在
+  /// 浏览器里选好文字、还没复制。
   Future<String?> pasteAndSearch({bool reportInvalid = true}) async {
+    final selectedText = await _readSelectedTextQuietly();
+    if (selectedText != null && _tokenizeAsSourceId(selectedText)) {
+      return _searchAndStashToClipboard(selectedText);
+    }
+
     final clipBoardText = (await Clipboard.getData('text/plain'))?.text;
     if (clipBoardText == null) return null;
 
-    // 剪贴板里没有合法 sourceId: 不打扰用户, 也不改搜索框;
+    // 既没有选中文本、剪贴板里也不是合法 sourceId: 不打扰用户, 也不改搜索框;
     // 用户主动点"粘贴并搜索"时给出提示。
     if (!_tokenizeAsSourceId(clipBoardText)) {
       if (reportInvalid) {
@@ -137,13 +153,48 @@ class UIService {
       return null;
     }
 
-    // set old sourceId to clipboard
+    return _searchAndStashToClipboard(clipBoardText);
+  }
+
+  /// 启动时的自动搜索: 用 `main()` 里在窗口显示前抓好的快照。
+  ///
+  /// 这里不重新读剪贴板/前台窗口: 窗口一 show, 前台窗口就是本程序自己,
+  /// 而剪贴板也可能已经被别的东西覆盖了。快照只取一次, 取完即清。
+  Future<String?> searchFromLaunchInput() async {
+    final candidate = takeLaunchInput();
+    if (candidate == null || !_tokenizeAsSourceId(candidate)) return null;
+
+    return _searchAndStashToClipboard(candidate);
+  }
+
+  /// 选区读取失败/超时一律当作"没有选中文本", 不能挡住剪贴板这条路。
+  Future<String?> _readSelectedTextQuietly() async {
+    try {
+      // 句柄在本 isolate 里同步采集: 选区读取本身跑在别的 isolate 里,
+      // 那边读到的"前台窗口"可能已经不是用户此刻在用的那个了。
+      final text = await ref.read(selectedTextReaderProvider)(
+        GetForegroundWindow(),
+      );
+      if (text == null || text.trim().isEmpty) return null;
+      Log.info(
+        'selected text -> '
+        '${text.length > 80 ? '${text.substring(0, 80)}...' : text}',
+      );
+      return text;
+    } catch (e, s) {
+      Log.error('read selected text failed.\n$e.\n$s');
+      return null;
+    }
+  }
+
+  /// 搜索前把当前 sourceId 放回剪贴板 (方便用户切回浏览器继续复制)。
+  Future<String?> _searchAndStashToClipboard(String text) async {
     final oldSourceId = ref.read(sourceIdProvider);
     if (oldSourceId != null) {
       await Clipboard.setData(ClipboardData(text: oldSourceId));
     }
 
-    return search(clipBoardText);
+    return search(text);
   }
 
   void onApiChannelChoosed(String? newValue) {

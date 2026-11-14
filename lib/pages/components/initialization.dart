@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:asmr_downloader/common/config_providers.dart';
-import 'package:asmr_downloader/common/const.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
 import 'package:asmr_downloader/services/ui/ui_providers.dart';
 import 'package:asmr_downloader/services/window_size_guard.dart';
@@ -29,9 +28,9 @@ class _InitializationState extends ConsumerState<Initialization> {
     }
     // init
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // startup search: 剪贴板内容不是 sourceId 时静默忽略
-      await Future.delayed(const Duration(milliseconds: PASTE_SEARCH_DELAY_MS));
-      ref.read(uiServiceProvider).pasteAndSearch(reportInvalid: false);
+      // 启动时的选中文本/剪贴板已经在 main() 里、窗口显示前抓好了,
+      // 这里只是把那份快照拿来搜一次 (没有就不动)。
+      await ref.read(uiServiceProvider).searchFromLaunchInput();
     });
   }
 

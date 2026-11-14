@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:asmr_downloader/common/const.dart';
 import 'package:asmr_downloader/pages/my_app.dart';
+import 'package:asmr_downloader/services/ui/launch_inputs.dart';
 import 'package:asmr_downloader/services/ui/theme/theme_provider.dart';
 import 'package:asmr_downloader/utils/json_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -84,6 +85,10 @@ Future<void> _applyStartupWindowEffect(String effect) async {
 }
 
 void main(List<String> args) async {
+  // 启动输入 (选中文本 + 剪贴板) 必须在窗口显示前抓: 一旦 show, 前台窗口
+  // 就是本程序自己, 那时再问"用户在哪个程序里选了字"已经问不出来了。
+  // 也顺手省掉了 UI 层"等 main 加载完"的 sleep。
+  await captureLaunchInputs(args);
   await setupWindow(args);
   // MCP 调试工具链 (flutter-mcp-toolkit), 仅 Windows debug 构建生效;
   // release 构建启用会导致窗口启动即最小化。
