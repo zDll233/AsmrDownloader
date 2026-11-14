@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:asmr_downloader/common/config_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/api_providers.dart';
 import 'package:asmr_downloader/services/ui/ui_providers.dart';
+import 'package:asmr_downloader/services/window_bounds_memory.dart';
 import 'package:asmr_downloader/services/window_size_guard.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
 import 'package:flutter/material.dart';
@@ -17,13 +18,16 @@ class Initialization extends ConsumerStatefulWidget {
 }
 
 class _InitializationState extends ConsumerState<Initialization> {
+  WindowBoundsMemory? _windowBoundsMemory;
   WindowSizeGuard? _windowSizeGuard;
 
   @override
   void initState() {
     super.initState();
-    // Windows 偶发 view/窗口尺寸不同步, 启动后自愈一次
+    // Windows: 记录窗口位置/尺寸变化 (是否恢复由设置里的开关决定)
     if (Platform.isWindows) {
+      _windowBoundsMemory = WindowBoundsMemory(ref.read(configFileProvider));
+      // Windows 偶发 view/窗口尺寸不同步, 启动后自愈一次
       _windowSizeGuard = WindowSizeGuard();
     }
     // init
@@ -36,6 +40,7 @@ class _InitializationState extends ConsumerState<Initialization> {
 
   @override
   void dispose() {
+    _windowBoundsMemory?.dispose();
     _windowSizeGuard?.dispose();
     // dispose
     super.dispose();
@@ -63,6 +68,9 @@ class _InitializationState extends ConsumerState<Initialization> {
 
 final _initProvider = FutureProvider.autoDispose((ref) async {
   final config = await ref.read(configFileProvider).read();
+
+  // 窗口位置/尺寸的恢复在 main.dart 的 show 之前完成 (那时才能生效),
+  // 这里不再重复恢复, 只负责记录后续的变化 (见 WindowBoundsMemory)。
 
   // api channel and proxy
 

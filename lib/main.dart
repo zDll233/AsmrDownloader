@@ -5,6 +5,7 @@ import 'package:asmr_downloader/pages/my_app.dart';
 import 'package:asmr_downloader/services/ui/launch_inputs.dart';
 import 'package:asmr_downloader/services/ui/theme/theme_provider.dart';
 import 'package:asmr_downloader/utils/json_storage.dart';
+import 'package:asmr_downloader/utils/log.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
@@ -42,6 +43,10 @@ Future<void> setupWindow(List<String> args) async {
       // 重新应用一次标题栏样式: SetWindowPos(SWP_FRAMECHANGED) 会触发 DWM
       // 按新样式重算非客户区, 让原生按钮立即消失。
       await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      // 恢复上次的窗口位置/尺寸, 必须在 show 之前: waitUntilReadyToShow 会按
+      // WindowOptions 的 size 再设一次, 之后在 Dart 侧恢复会被它覆盖。
+      final config = await JsonStorage(filePath: 'asmr_dl_config.json').read();
+      await _restoreWindowBoundsBeforeShow(config, initialSize);
       windowManager
         ..setMinimumSize(initialSize)
         ..setTitle('AsmrDownloader')
@@ -50,13 +55,51 @@ Future<void> setupWindow(List<String> args) async {
       // 窗口显示后应用配置的窗口背景效果 (缺省 acrylic 毛玻璃);
       // DWM 在窗口可见并首次绘制后才真正合成 backdrop,
       // 显示后 80ms 重设一次, 消除启动时延迟。
-      final config = await JsonStorage(filePath: 'asmr_dl_config.json').read();
       final effect = resolveWindowEffect(config);
       await _applyStartupWindowEffect(effect);
       Future<void>.delayed(const Duration(milliseconds: 80), () {
         _applyStartupWindowEffect(effect);
       });
     });
+  }
+}
+
+/// 在窗口 show 之前恢复上次的位置/尺寸。
+///
+/// 必须在这里做而不是在 Initialization 里: `waitUntilReadyToShow` 内部会按
+/// WindowOptions 的 size 再设一次窗口尺寸, Dart 侧稍后恢复会被它覆盖掉。
+Future<void> _restoreWindowBoundsBeforeShow(
+  Map<String, dynamic> config,
+  Size initialSize,
+) async {
+  final b = config['windowBounds'];
+  if (b is! Map) return;
+
+  final rememberPos = config['rememberWindowPos'] ?? kDefaultRememberWindowPos;
+  final rememberSize =
+      config['rememberWindowSize'] ?? kDefaultRememberWindowSize;
+
+  final sizeValid = b['w'] is num &&
+      b['h'] is num &&
+      (b['w'] as num) >= initialSize.width &&
+      (b['h'] as num) >= initialSize.height;
+  final posValid = b['x'] is num && b['y'] is num;
+
+  try {
+    if (rememberSize && sizeValid) {
+      await windowManager.setSize(Size(
+        (b['w'] as num).toDouble(),
+        (b['h'] as num).toDouble(),
+      ));
+    }
+    if (rememberPos && posValid) {
+      await windowManager.setPosition(Offset(
+        (b['x'] as num).toDouble(),
+        (b['y'] as num).toDouble(),
+      ));
+    }
+  } catch (e) {
+    Log.error('restore window bounds failed.\n$e');
   }
 }
 

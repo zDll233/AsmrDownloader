@@ -3,11 +3,39 @@ import 'package:asmr_downloader/common/const.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+/// 默认主题种子色 (由 [kDefaultThemeSeedHex] 派生, 单一来源)。
+final Color kDefaultThemeSeed = parseHexColor(kDefaultThemeSeedHex)!;
+
+/// 解析自定义主题色, 缺省返回默认紫色 (#RRGGBB)。
+String resolveThemeSeedHex(Map<String, dynamic> config) {
+  final v = config['themeSeedColor'];
+  return v is String && v.isNotEmpty ? v : kDefaultThemeSeedHex;
+}
+
+/// 解析 #RRGGBB / RRGGBB 十六进制颜色, 非法返回 null。
+Color? parseHexColor(String hex) {
+  final cleaned = hex.replaceAll('#', '').trim();
+  if (cleaned.length != 6) return null;
+  final value = int.tryParse(cleaned, radix: 16);
+  if (value == null) return null;
+  return Color(0xFF000000 | value);
+}
+
+/// Color → #RRGGBB。
+String colorToHex(Color color) =>
+    '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+
 /// 窗口背景效果解析 (config.json `windowEffect`, 缺省 acrylic)。
 String resolveWindowEffect(Map<String, dynamic> config) {
   final v = config['windowEffect'];
   return v is String && v.isNotEmpty ? v : WINDOW_EFFECT_ACRYLIC;
 }
+
+/// 主题种子色: 用户在设置里选择的主题色 (缺省紫色)。
+final themeSeedColorProvider = FutureProvider.autoDispose<Color>((ref) async {
+  final config = await ref.read(configFileProvider).read();
+  return parseHexColor(resolveThemeSeedHex(config)) ?? kDefaultThemeSeed;
+});
 
 /// 窗口背景效果模式 ('transparent' | 'acrylic' | 'opaque')。
 final windowEffectProvider = FutureProvider.autoDispose<String>((ref) async {
@@ -15,14 +43,15 @@ final windowEffectProvider = FutureProvider.autoDispose<String>((ref) async {
   return resolveWindowEffect(config);
 });
 
-/// 应用主题: 由种子色生成 (参考 Again 项目的主题定制)。
+/// 应用主题: 由主题色生成 (参考 Again 项目的主题定制)。
 final appThemeProvider = Provider<ThemeData>((ref) {
-  return _buildTheme();
+  final seed = ref.watch(themeSeedColorProvider).valueOrNull ?? kDefaultThemeSeed;
+  return _buildTheme(seed);
 });
 
-ThemeData _buildTheme() {
+ThemeData _buildTheme(Color seed) {
   final scheme = ColorScheme.fromSeed(
-    seedColor: Colors.purple,
+    seedColor: seed,
     brightness: Brightness.dark,
     dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
   );
