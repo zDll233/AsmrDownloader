@@ -128,9 +128,8 @@ Future<void> _applyStartupWindowEffect(String effect) async {
 }
 
 void main(List<String> args) async {
-  // 启动输入 (选中文本 + 剪贴板) 必须在窗口显示前抓: 一旦 show, 前台窗口
-  // 就是本程序自己, 那时再问"用户在哪个程序里选了字"已经问不出来了。
-  // 也顺手省掉了 UI 层"等 main 加载完"的 sleep。
+  // 启动时先把剪贴板抓下来: 窗口 show 之前那段空窗期里它可能已经被别的东西
+  // 覆盖了。也顺手省掉了 UI 层"等 main 加载完"的 sleep。
   await captureLaunchInputs(args);
   await setupWindow(args);
   // MCP 调试工具链 (flutter-mcp-toolkit), 仅 Windows debug 构建生效;

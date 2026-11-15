@@ -1,18 +1,10 @@
 import 'package:asmr_downloader/services/asmr_repo/providers/tracks_providers.dart';
 import 'package:asmr_downloader/services/asmr_repo/providers/work_info_providers.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
-import 'package:asmr_downloader/services/ui/selection_reader.dart';
 import 'package:asmr_downloader/services/ui/ui_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 final uiServiceProvider = Provider((ref) => UIService(ref));
-
-/// 读取"当前选中文本" (用户主动点"粘贴并搜索"时用)。
-///
-/// 入参是调用方那一刻的前台窗口句柄; 测试里可以替换成假实现。
-final selectedTextReaderProvider = Provider<SelectedTextReader>(
-  (ref) => (windowHandle) => readSelectedText(windowHandle: windowHandle),
-);
-
 
 /// 依次合并两个异步状态: 已落定的错误优先, 其次传播加载中, 最后取数据。
 ///

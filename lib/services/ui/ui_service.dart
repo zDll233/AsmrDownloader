@@ -10,7 +10,6 @@ import 'package:asmr_downloader/services/asmr_repo/providers/work_info_providers
 import 'package:asmr_downloader/services/asmr_repo/search_failure.dart';
 import 'package:asmr_downloader/services/download/download_providers.dart';
 import 'package:asmr_downloader/services/ui/launch_inputs.dart';
-import 'package:asmr_downloader/services/ui/ui_providers.dart';
 import 'package:asmr_downloader/services/ui/system_proxy_reader.dart';
 import 'package:asmr_downloader/utils/system_proxy_config.dart';
 import 'package:asmr_downloader/utils/tool_functions.dart';
@@ -21,7 +20,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:win32/win32.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
 
 import 'package:path/path.dart' as p;
@@ -131,20 +129,12 @@ class UIService {
     return tokens.every((e) => isSourceIdValid(normalizeInputStatic(e)));
   }
 
-  /// 用户主动点"粘贴并搜索": 先看选中文本, 再看剪贴板。
-  ///
-  /// 和启动时的自动搜索不同, 这里读的是"此刻"的实时状态 —— 用户可能刚在
-  /// 浏览器里选好文字、还没复制。
+  /// 用户主动点"粘贴并搜索": 读剪贴板。
   Future<String?> pasteAndSearch({bool reportInvalid = true}) async {
-    final selectedText = await _readSelectedTextQuietly();
-    if (selectedText != null && _tokenizeAsSourceId(selectedText)) {
-      return _searchAndStashToClipboard(selectedText);
-    }
-
     final clipBoardText = (await Clipboard.getData('text/plain'))?.text;
     if (clipBoardText == null) return null;
 
-    // 既没有选中文本、剪贴板里也不是合法 sourceId: 不打扰用户, 也不改搜索框;
+    // 剪贴板里没有合法 sourceId: 不打扰用户, 也不改搜索框;
     // 用户主动点"粘贴并搜索"时给出提示。
     if (!_tokenizeAsSourceId(clipBoardText)) {
       if (reportInvalid) {
@@ -156,35 +146,15 @@ class UIService {
     return _searchAndStashToClipboard(clipBoardText);
   }
 
-  /// 启动时的自动搜索: 用 `main()` 里在窗口显示前抓好的快照。
+  /// 启动时的自动搜索: 用 `main()` 里在窗口显示前抓好的剪贴板快照。
   ///
-  /// 这里不重新读剪贴板/前台窗口: 窗口一 show, 前台窗口就是本程序自己,
-  /// 而剪贴板也可能已经被别的东西覆盖了。快照只取一次, 取完即清。
+  /// 这里不重新读剪贴板: 窗口 show 之前那段空窗期里剪贴板可能已经被别的东西
+  /// 覆盖了。快照只取一次, 取完即清。
   Future<String?> searchFromLaunchInput() async {
     final candidate = takeLaunchInput();
     if (candidate == null || !_tokenizeAsSourceId(candidate)) return null;
 
     return _searchAndStashToClipboard(candidate);
-  }
-
-  /// 选区读取失败/超时一律当作"没有选中文本", 不能挡住剪贴板这条路。
-  Future<String?> _readSelectedTextQuietly() async {
-    try {
-      // 句柄在本 isolate 里同步采集: 选区读取本身跑在别的 isolate 里,
-      // 那边读到的"前台窗口"可能已经不是用户此刻在用的那个了。
-      final text = await ref.read(selectedTextReaderProvider)(
-        GetForegroundWindow(),
-      );
-      if (text == null || text.trim().isEmpty) return null;
-      Log.info(
-        'selected text -> '
-        '${text.length > 80 ? '${text.substring(0, 80)}...' : text}',
-      );
-      return text;
-    } catch (e, s) {
-      Log.error('read selected text failed.\n$e.\n$s');
-      return null;
-    }
   }
 
   /// 搜索前把当前 sourceId 放回剪贴板 (方便用户切回浏览器继续复制)。
