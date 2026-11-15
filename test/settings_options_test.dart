@@ -129,9 +129,71 @@ void main() {
       expect(find.text('选择颜色'), findsNothing);
     });
 
+    testWidgets('在颜色对话框里选色并确定, 会写入 themeSeedColor', (tester) async {
+      final storage = await pumpSettings(tester);
+
+      await tester.tap(find.text('主题色'));
+      await tester.pumpAndSettle();
+
+      // 点一个预设色块 (预设第一项是红色 #F44336), 再确定
+      // 色块是 InkWell 包着的方形, 用 ColorPickerDialog.presets 的坐标定位
+      final swatches = find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.byType(InkWell),
+      );
+      expect(swatches, findsWidgets);
+      await tester.tap(swatches.first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, '确定'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('选择颜色'), findsNothing);
+      // 写入的应当是合法 #RRGGBB
+      final written = storage.data['themeSeedColor'] as String?;
+      expect(written, isNotNull);
+      expect(written, matches(RegExp(r'^#[0-9A-F]{6}$')));
+    });
+
     testWidgets('危险操作里有"重置所有设置"', (tester) async {
       await pumpSettings(tester);
 
+      expect(find.text('重置所有设置'), findsOneWidget);
+    });
+
+    testWidgets('设置项顺序与 Again 一致 (窗口记忆在背景效果之前)', (tester) async {
+      await pumpSettings(tester);
+
+      final posY = tester.getTopLeft(find.text('记住窗口位置')).dy;
+      final sizeY = tester.getTopLeft(find.text('记住窗口大小')).dy;
+      final effectY = tester.getTopLeft(find.text('窗口背景效果')).dy;
+
+      expect(posY, lessThan(sizeY));
+      expect(sizeY, lessThan(effectY));
+    });
+
+    testWidgets('重置所有设置用 Again 同款图标 (restart_alt)', (tester) async {
+      await pumpSettings(tester);
+
+      // 图标挂在"重置所有设置"这一行的 ListTile 上
+      final tile = find.ancestor(
+        of: find.text('重置所有设置'),
+        matching: find.byType(ListTile),
+      );
+      expect(tile, findsOneWidget);
+      final icon = tester.widget<Icon>(
+        find.descendant(of: tile, matching: find.byType(Icon)),
+      );
+      expect(icon.icon, Icons.restart_alt);
+    });
+
+    testWidgets('检查更新与重置是两张独立卡片, 且不带分节标题', (tester) async {
+      await pumpSettings(tester);
+
+      // Again 里最后两项目前没有"关于"/"危险操作"这类标题
+      expect(find.text('关于'), findsNothing);
+      expect(find.text('危险操作'), findsNothing);
+      expect(find.text('检查更新'), findsOneWidget);
       expect(find.text('重置所有设置'), findsOneWidget);
     });
   });

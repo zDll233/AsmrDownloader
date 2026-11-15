@@ -310,45 +310,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           SettingsCard(
                             children: [
                               ListTile(
-                                leading: const Icon(Icons.blur_on),
-                                title: const Text('窗口背景效果'),
-                                contentPadding:
-                                    const EdgeInsets.only(left: 16, right: 16),
-                                trailing: SizedBox(
-                                  width: isNarrow ? 180 : 216,
-                                  child: SegmentedButton<String>(
-                                    segments: const [
-                                      ButtonSegment(
-                                        value: WINDOW_EFFECT_TRANSPARENT,
-                                        label: Text('透明'),
-                                      ),
-                                      ButtonSegment(
-                                        value: WINDOW_EFFECT_ACRYLIC,
-                                        label: Text('亚克力'),
-                                      ),
-                                      ButtonSegment(
-                                        value: WINDOW_EFFECT_OPAQUE,
-                                        label: Text('不透明'),
-                                      ),
-                                    ],
-                                    selected: {_windowEffect},
-                                    showSelectedIcon: false,
-                                    style: ButtonStyle(
-                                      visualDensity: VisualDensity.compact,
-                                    ),
-                                    onSelectionChanged: (selection) async {
-                                      final value = selection.first;
-                                      setState(() => _windowEffect = value);
-                                      await _save({'windowEffect': value});
-                                      ref.invalidate(windowEffectProvider);
-                                      ref
-                                          .read(uiServiceProvider)
-                                          .applyWindowEffect(value);
-                                    },
-                                  ),
-                                ),
-                              ),
-                              ListTile(
                                 leading: const Icon(Icons.location_on_outlined),
                                 title: const Text('记住窗口位置'),
                                 contentPadding:
@@ -398,6 +359,46 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                              // 顺序与 Again 一致: 两个"记住"开关在前, 背景效果在后
+                              ListTile(
+                                leading: const Icon(Icons.blur_on),
+                                title: const Text('窗口背景效果'),
+                                contentPadding:
+                                    const EdgeInsets.only(left: 16, right: 16),
+                                trailing: SizedBox(
+                                  width: isNarrow ? 180 : 216,
+                                  child: SegmentedButton<String>(
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: WINDOW_EFFECT_TRANSPARENT,
+                                        label: Text('透明'),
+                                      ),
+                                      ButtonSegment(
+                                        value: WINDOW_EFFECT_ACRYLIC,
+                                        label: Text('亚克力'),
+                                      ),
+                                      ButtonSegment(
+                                        value: WINDOW_EFFECT_OPAQUE,
+                                        label: Text('不透明'),
+                                      ),
+                                    ],
+                                    selected: {_windowEffect},
+                                    showSelectedIcon: false,
+                                    style: ButtonStyle(
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    onSelectionChanged: (selection) async {
+                                      final value = selection.first;
+                                      setState(() => _windowEffect = value);
+                                      await _save({'windowEffect': value});
+                                      ref.invalidate(windowEffectProvider);
+                                      ref
+                                          .read(uiServiceProvider)
+                                          .applyWindowEffect(value);
+                                    },
+                                  ),
                                 ),
                               ),
                             ],
@@ -454,11 +455,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ),
                           ],
                         ),
-                        const SettingsSectionTitle(title: '关于'),
-                        SettingsCard(
-                          children: [
-                            // 检查更新: Windows 专属 (zip 覆盖式更新)
-                            if (Platform.isWindows)
+                        // 检查更新: Windows 专属 (zip 覆盖式更新)。
+                        // 与 Again 一致: 独立卡片, 不带分节标题。
+                        if (Platform.isWindows) ...[
+                          const SizedBox(height: 10),
+                          SettingsCard(
+                            children: [
                               ListTile(
                                 leading: Icon(
                                   Icons.system_update_alt,
@@ -471,14 +473,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     const EdgeInsets.only(left: 16, right: 16),
                                 onTap: _checkUpdate,
                               ),
-                          ],
-                        ),
-                        const SettingsSectionTitle(title: '危险操作'),
+                            ],
+                          ),
+                        ],
+                        // 重置所有设置: 独立卡片 (同上)
+                        const SizedBox(height: 10),
                         SettingsCard(
                           children: [
                             ListTile(
                               leading: Icon(
-                                Icons.restore_from_trash_outlined,
+                                Icons.restart_alt,
                                 color: scheme.error,
                               ),
                               title: Text(
